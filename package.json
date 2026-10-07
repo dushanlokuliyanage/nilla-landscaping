@@ -1,0 +1,9 @@
+{
+  "name": "nilla-garden",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:admin": "cd admin && npm run dev"
+  }
+}
