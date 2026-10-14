@@ -2,30 +2,28 @@
   "name": "backend",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
-  },
+  "dev": "wrangler dev",
+  "deploy": "wrangler deploy",
+  "db:generate": "drizzle-kit generate",
+  "db:migrate": "drizzle-kit migrate",
+  "db:studio": "drizzle-kit studio"
+},
   "dependencies": {
-    "@hono/node-server": "^2.1.1",
     "@neondatabase/serverless": "^1.1.0",
     "bcryptjs": "^3.0.3",
-    "dotenv": "^18.0.3",
     "drizzle-orm": "^0.45.3",
     "hono": "^4.13.9",
-    "jsonwebtoken": "^9.0.3",
+    "jose": "^6.2.12",
     "resend": "^6.29.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.2",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "wrangler": "^4.148.0"
   }
+  
 }

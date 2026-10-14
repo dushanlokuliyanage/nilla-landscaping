@@ -1,18 +1,19 @@
 import { Resend } from "resend";
-import "dotenv/config";
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
-
-export async function sendInquiryNotification(inquiry: {
-  name: string;
-  email: string;
-  phone?: string | null;
-  service?: string | null;
-  message: string;
-}) {
+export async function sendInquiryNotification(
+  inquiry: {
+    name: string;
+    email: string;
+    phone?: string | null;
+    service?: string | null;
+    message: string;
+  },
+  env: { RESEND_API_KEY: string; ADMIN_EMAIL: string }
+) {
+  const resend = new Resend(env.RESEND_API_KEY);
   await resend.emails.send({
-    from: "Nilla Garden <onboarding@resend.dev>", // swap once your domain is verified in Resend
-    to: process.env.ADMIN_EMAIL!,
+    from: "Nilla Garden <onboarding@resend.dev>",
+    to: env.ADMIN_EMAIL,
     subject: `New inquiry from ${inquiry.name}`,
     html: `
       <h2>New Inquiry — Nilla Garden</h2>
@@ -25,7 +26,11 @@ export async function sendInquiryNotification(inquiry: {
   });
 }
 
-export async function sendCustomerConfirmation(inquiry: { name: string; email: string }) {
+export async function sendCustomerConfirmation(
+  inquiry: { name: string; email: string },
+  env: { RESEND_API_KEY: string }
+) {
+  const resend = new Resend(env.RESEND_API_KEY);
   await resend.emails.send({
     from: "Nilla Garden <onboarding@resend.dev>",
     to: inquiry.email,

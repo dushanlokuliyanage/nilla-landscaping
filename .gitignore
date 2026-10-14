@@ -1,6 +1,18 @@
+# dependencies
 node_modules/
+
+# env files and secrets
 .env
-.env.local
-dist/
+.env.*
+!.env.example
+.dev.vars
+
+# build output
 .next/
+out/
+dist/
+.wrangler/
+
+# misc
 *.log
+.DS_Store

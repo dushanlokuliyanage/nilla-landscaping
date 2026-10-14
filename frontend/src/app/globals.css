@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-cream: #faf7f0;
+  --color-forest: #14401f;
+  --color-leaf: #2f6b3a;
+  --color-sage: #a7c4a0;
+  --color-earth: #c98b4b;
+
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-fraunces);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: #1d2b20;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--color-sage);
+}
