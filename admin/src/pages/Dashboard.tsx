@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { LogOut, Mail, Phone, Trash2, Check, Menu, X, Search, Inbox, MailOpen, Clock } from "lucide-react";
-import { getInquiries, markAsRead, deleteInquiry, logout, type Inquiry } from "@/lib/api";
+import { Mail, Phone, Trash2, Check, Search, Inbox, MailOpen, Clock } from "lucide-react";
+import { getInquiries, markAsRead, deleteInquiry, type Inquiry } from "@/lib/api";
+import NavTabs from "@/components/NavTabs";
+import AdminHeader from "@/components/AdminHeader";
 
 type StatusFilter = "all" | "unread" | "read";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [serviceFilter, setServiceFilter] = useState("all");
@@ -39,11 +38,6 @@ export default function Dashboard() {
     setInquiries((prev) => prev.filter((i) => i.id !== id));
   }
 
-  function handleLogout() {
-    logout();
-    navigate("/login");
-  }
-
   const services = useMemo(() => Array.from(new Set(
     inquiries.map((inquiry) => inquiry.service).filter((service): service is string => Boolean(service)),
   )), [inquiries]);
@@ -66,45 +60,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-forest/10 bg-cream/90 backdrop-blur-md">
-        <nav className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-4 px-5 py-3">
-          <a href="/" className="flex shrink-0 items-center gap-2.5 text-forest">
-            <img src="/images/sprout-logo.svg" alt="Nilla Garden" className="h-9 w-9" />
-            <span className="leading-none">
-              <span className="block text-xl font-semibold tracking-tight">Nilla</span>
-              <span className="mt-1 block text-[9px] uppercase tracking-[0.14em] text-forest/60">Landscaping &amp; Garden</span>
-            </span>
-          </a>
-
-          {/* <div className="hidden items-center gap-7 text-sm font-medium text-forest/80 md:flex">
-            <a href="#" className="transition hover:text-leaf">Users</a>
-     
-          </div> */}
-
-          <div className="hidden items-center gap-4 md:flex">
-            <span className="text-xs text-forest/60">{stats.unread} unread</span>
-            <button onClick={handleLogout} className="flex items-center gap-2 bg-forest px-5 py-2 text-sm font-medium text-cream transition hover:bg-leaf">
-              <LogOut className="h-4 w-4" /> Logout
-            </button>
-          </div>
-
-          <button onClick={() => setMenuOpen((open) => !open)} className="text-forest md:hidden" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen}>
-            {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </nav>
-        {menuOpen && (
-          <div className="space-y-4 border-t border-forest/10 bg-cream px-5 py-4 md:hidden">
-            <a href="#services" onClick={() => setMenuOpen(false)} className="block font-medium text-forest">Services</a>
-            <a href="#why-us" onClick={() => setMenuOpen(false)} className="block font-medium text-forest">Why Us</a>
-            <a href="#process" onClick={() => setMenuOpen(false)} className="block font-medium text-forest">Process</a>
-            <a href="#contact" onClick={() => setMenuOpen(false)} className="block font-medium text-forest">Contact</a>
-            <p className="text-xs text-forest/60">{stats.unread} unread inquiries</p>
-            <button onClick={handleLogout} className="flex w-full items-center justify-center gap-2 bg-forest px-5 py-2.5 font-medium text-cream">
-              <LogOut className="h-4 w-4" /> Logout
-            </button>
-          </div>
-        )}
-      </header>
+      <AdminHeader unreadCount={stats.unread} />
+      <NavTabs />
 
       <main className="mx-auto max-w-6xl px-5 py-8">
         <section aria-label="Inquiry summary" className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
