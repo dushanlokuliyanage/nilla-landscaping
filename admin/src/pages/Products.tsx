@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, ImageOff } from "lucide-react";
+import { Plus, Pencil, Trash2, X, ImageOff, Upload } from "lucide-react";
 import AdminHeader from "@/components/AdminHeader";
 import NavTabs from "@/components/NavTabs";
+import { uploadImage } from "@/lib/upload";
 import {
   getProducts,
   createProduct,
@@ -40,7 +41,7 @@ type FormState = {
   price: string;
   unit: string;
   inStock: boolean;
-  images: string;
+  images: string[];
   options: string;
 };
 
@@ -50,7 +51,7 @@ const emptyForm: FormState = {
   price: "",
   unit: "per kg",
   inStock: true,
-  images: "",
+  images: [],
   options: "",
 };
 
@@ -61,13 +62,13 @@ function toForm(p: Product): FormState {
     price: String(p.price),
     unit: p.unit,
     inStock: p.inStock,
-    images: p.images.join("\n"),
+    images: [...p.images],
     options: optionsToText(p.options),
   };
 }
 
 const inputClass =
-  "w-full rounded-none border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20";
+  "w-full rounded-xl border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20";
 
 function Field({
   label,
@@ -93,6 +94,7 @@ export default function Products() {
   const [editing, setEditing] = useState<Product | "new" | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   async function load() {
@@ -119,6 +121,30 @@ export default function Products() {
     setEditing(p);
   }
 
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+
+    setError("");
+    setUploading(true);
+    try {
+      const urls: string[] = [];
+      for (const file of files) {
+        urls.push(await uploadImage(file));
+      }
+      setForm((f) => ({ ...f, images: [...f.images, ...urls] }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function removeImage(index: number) {
+    setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== index) }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -135,10 +161,7 @@ export default function Products() {
       price,
       unit: form.unit.trim() || "per kg",
       inStock: form.inStock,
-      images: form.images
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      images: form.images,
       options: textToOptions(form.options),
     };
 
@@ -173,7 +196,7 @@ export default function Products() {
           </h2>
           <button
             onClick={openNew}
-            className="flex items-center gap-2 rounded-none bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf"
+            className="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf"
           >
             <Plus className="h-4 w-4" />
             Add product
@@ -189,7 +212,7 @@ export default function Products() {
             {products.map((p) => (
               <div
                 key={p.id}
-                className="overflow-hidden rounded-none border border-forest/10 bg-white/60"
+                className="overflow-hidden rounded-2xl border border-forest/10 bg-white/60"
               >
                 {p.images[0] ? (
                   <img src={p.images[0]} alt={p.name} className="h-40 w-full object-cover" />
@@ -203,7 +226,7 @@ export default function Products() {
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-forest">{p.name}</h3>
                     <span
-                      className={`shrink-0 rounded-none px-2.5 py-0.5 text-xs ${
+                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs ${
                         p.inStock ? "bg-sage/40 text-forest" : "bg-red-100 text-red-700"
                       }`}
                     >
@@ -223,14 +246,14 @@ export default function Products() {
                   <div className="mt-4 flex gap-2">
                     <button
                       onClick={() => openEdit(p)}
-                      className="flex items-center gap-1.5 rounded-none border border-forest/15 px-3.5 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
+                      className="flex items-center gap-1.5 rounded-full border border-forest/15 px-3.5 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(p)}
-                      className="flex items-center gap-1.5 rounded-none border border-red-200 px-3.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                      className="flex items-center gap-1.5 rounded-full border border-red-200 px-3.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete
@@ -247,7 +270,7 @@ export default function Products() {
         <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-lg rounded-none bg-cream p-6 shadow-xl"
+            className="w-full max-w-lg rounded-3xl bg-cream p-6 shadow-xl"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-forest">
@@ -298,7 +321,7 @@ export default function Products() {
 
               <Field
                 label="Options (optional)"
-                hint='One per line, like: Size: 10-20mm, 20-40mm'
+                hint="One per line, like: Size: 10-20mm, 20-40mm"
               >
                 <textarea
                   rows={3}
@@ -308,16 +331,49 @@ export default function Products() {
                 />
               </Field>
 
-              <Field
-                label="Image links"
-                hint="One link per line. Direct photo upload comes next."
-              >
-                <textarea
-                  rows={3}
-                  value={form.images}
-                  onChange={(e) => setForm({ ...form, images: e.target.value })}
-                  className={inputClass}
-                />
+              <Field label="Photos" hint="The first photo is the main one. Max 10 MB each.">
+                <div className="flex flex-wrap gap-3">
+                  {form.images.map((src, i) => (
+                    <div
+                      key={src + i}
+                      className="relative h-20 w-20 overflow-hidden rounded-xl border border-forest/15"
+                    >
+                      <img src={src} alt="" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white"
+                        aria-label="Remove photo"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      {i === 0 && (
+                        <span className="absolute inset-x-0 bottom-0 bg-forest/80 text-center text-[10px] text-cream">
+                          Main
+                        </span>
+                      )}
+                    </div>
+                  ))}
+
+                  <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-forest/30 text-xs text-forest/60 transition hover:border-leaf hover:text-leaf">
+                    {uploading ? (
+                      "..."
+                    ) : (
+                      <>
+                        <Upload className="mb-1 h-5 w-5" />
+                        Add
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleFiles}
+                      disabled={uploading}
+                    />
+                  </label>
+                </div>
               </Field>
 
               <label className="flex items-center gap-2 text-sm text-forest">
@@ -336,14 +392,14 @@ export default function Products() {
               <button
                 type="button"
                 onClick={() => setEditing(null)}
-                className="rounded-none border border-forest/15 px-5 py-2.5 text-sm font-medium text-forest transition hover:bg-white"
+                className="rounded-full border border-forest/15 px-5 py-2.5 text-sm font-medium text-forest transition hover:bg-white"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={saving}
-                className="rounded-none bg-forest px-6 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
+                disabled={saving || uploading}
+                className="rounded-full bg-forest px-6 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
               >
                 {saving ? "Saving..." : "Save"}
               </button>
