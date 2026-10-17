@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShoppingBag } from "lucide-react";
 import Logo from "@/components/Logo";
+import { useCart } from "@/context/CartContext";
 
 const links = [
   { href: "/#services", label: "Services" },
@@ -15,6 +16,7 @@ const links = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const { count } = useCart();
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-forest/10 bg-cream/80 backdrop-blur-md">
@@ -33,22 +35,37 @@ export default function Navbar() {
           ))}
         </ul>
 
-        <Link
-          href="/#contact"
-          className="hidden bg-forest px-5 py-2 text-sm font-medium text-cream transition hover:bg-leaf md:inline-flex"
-        >
-          Get a Quote
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/cart"
+            aria-label={count > 0 ? `Cart, ${count} items` : "Cart"}
+            className="relative flex h-10 w-10 items-center justify-center text-forest transition hover:bg-white"
+          >
+            <ShoppingBag className="h-5 w-5" />
+            {count > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center bg-leaf px-1 text-[11px] font-medium text-cream">
+                {count}
+              </span>
+            )}
+          </Link>
 
-        <button
-          type="button"
-          className="text-forest md:hidden"
-          onClick={() => setOpen(!open)}
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-        >
-          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+          <Link
+            href="/#contact"
+            className="hidden bg-forest px-5 py-2 text-sm font-medium text-cream transition hover:bg-leaf md:inline-flex"
+          >
+            Get a Quote
+          </Link>
+
+          <button
+            type="button"
+            className="text-forest md:hidden"
+            onClick={() => setOpen(!open)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+          >
+            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </nav>
 
       {open && (

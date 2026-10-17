@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Leaf } from "lucide-react";
+import { Leaf, ArrowRight } from "lucide-react";
 import type { Product } from "@/lib/api";
 
 export default function ProductCard({ product }: { product: Product }) {
@@ -34,10 +34,20 @@ export default function ProductCard({ product }: { product: Product }) {
         <p className="mt-1 line-clamp-2 text-sm text-forest/60">
           {product.description}
         </p>
-        <p className="mt-3 font-medium text-leaf">
-          Rs. {product.price.toLocaleString()}{" "}
-          <span className="text-sm font-normal text-forest/50">{product.unit}</span>
-        </p>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="font-medium text-leaf">
+            Rs. {product.price.toLocaleString()}{" "}
+            <span className="text-sm font-normal text-forest/50">{product.unit}</span>
+          </p>
+
+          {product.inStock && (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-none bg-forest px-4 py-2 text-sm font-medium text-cream transition group-hover:bg-leaf">
+              Order now
+              <ArrowRight className="h-4 w-4" />
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );

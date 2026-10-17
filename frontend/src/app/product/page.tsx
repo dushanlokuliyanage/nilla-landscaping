@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import ProductView from "@/components/ProductView";
 
 export const metadata: Metadata = {
-  title: "Product — Nilla Landscaping and Garden Service",
+  title: "Product | Nilla Landscaping and Garden Service",
 };
 
 export default function ProductPage() {

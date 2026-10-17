@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import ShopGrid from "@/components/ShopGrid";
 
 export const metadata: Metadata = {
-  title: "Shop — Nilla Landscaping and Garden Service",
+  title: "Shop | Nilla Landscaping and Garden Service",
   description: "Browse our pebbles and send an order request.",
 };
 

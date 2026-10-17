@@ -68,7 +68,7 @@ function toForm(p: Product): FormState {
 }
 
 const inputClass =
-  "w-full rounded-xl border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20";
+  "w-full rounded-none border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20";
 
 function Field({
   label,
@@ -196,7 +196,7 @@ export default function Products() {
           </h2>
           <button
             onClick={openNew}
-            className="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf"
+            className="flex items-center gap-2 rounded-none bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf"
           >
             <Plus className="h-4 w-4" />
             Add product
@@ -212,7 +212,7 @@ export default function Products() {
             {products.map((p) => (
               <div
                 key={p.id}
-                className="overflow-hidden rounded-2xl border border-forest/10 bg-white/60"
+                className="overflow-hidden rounded-none border border-forest/10 bg-white/60"
               >
                 {p.images[0] ? (
                   <img src={p.images[0]} alt={p.name} className="h-40 w-full object-cover" />
@@ -226,7 +226,7 @@ export default function Products() {
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-forest">{p.name}</h3>
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs ${
+                      className={`shrink-0 rounded-none px-2.5 py-0.5 text-xs ${
                         p.inStock ? "bg-sage/40 text-forest" : "bg-red-100 text-red-700"
                       }`}
                     >
@@ -246,14 +246,14 @@ export default function Products() {
                   <div className="mt-4 flex gap-2">
                     <button
                       onClick={() => openEdit(p)}
-                      className="flex items-center gap-1.5 rounded-full border border-forest/15 px-3.5 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
+                      className="flex items-center gap-1.5 rounded-none border border-forest/15 px-3.5 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(p)}
-                      className="flex items-center gap-1.5 rounded-full border border-red-200 px-3.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                      className="flex items-center gap-1.5 rounded-none border border-red-200 px-3.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete
@@ -270,7 +270,7 @@ export default function Products() {
         <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-lg rounded-3xl bg-cream p-6 shadow-xl"
+            className="w-full max-w-lg rounded-none bg-cream p-6 shadow-xl"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-forest">
@@ -336,13 +336,13 @@ export default function Products() {
                   {form.images.map((src, i) => (
                     <div
                       key={src + i}
-                      className="relative h-20 w-20 overflow-hidden rounded-xl border border-forest/15"
+                      className="relative h-20 w-20 overflow-hidden rounded-none border border-forest/15"
                     >
                       <img src={src} alt="" className="h-full w-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removeImage(i)}
-                        className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white"
+                        className="absolute right-1 top-1 rounded-none bg-black/60 p-0.5 text-white"
                         aria-label="Remove photo"
                       >
                         <X className="h-3 w-3" />
@@ -355,7 +355,7 @@ export default function Products() {
                     </div>
                   ))}
 
-                  <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-forest/30 text-xs text-forest/60 transition hover:border-leaf hover:text-leaf">
+                  <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-none border border-dashed border-forest/30 text-xs text-forest/60 transition hover:border-leaf hover:text-leaf">
                     {uploading ? (
                       "..."
                     ) : (
@@ -392,14 +392,14 @@ export default function Products() {
               <button
                 type="button"
                 onClick={() => setEditing(null)}
-                className="rounded-full border border-forest/15 px-5 py-2.5 text-sm font-medium text-forest transition hover:bg-white"
+                className="rounded-none border border-forest/15 px-5 py-2.5 text-sm font-medium text-forest transition hover:bg-white"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving || uploading}
-                className="rounded-full bg-forest px-6 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
+                className="rounded-none bg-forest px-6 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
               >
                 {saving ? "Saving..." : "Save"}
               </button>

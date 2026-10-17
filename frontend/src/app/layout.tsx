@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, DM_Sans } from "next/font/google";
 import "./globals.css";
+import { CartProvider } from "@/context/CartContext";
 
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
@@ -23,7 +24,9 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       className={`${fraunces.variable} ${dmSans.variable}`}
     >
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <CartProvider>{children}</CartProvider>
+      </body>
     </html>
   );
 }

@@ -2,30 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Leaf, Send } from "lucide-react";
-import { getProduct, submitOrder, type Product } from "@/lib/api";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, ArrowRight, Check, Leaf, ShoppingBag } from "lucide-react";
+import { getProduct, type Product } from "@/lib/api";
+import { useCart } from "@/context/CartContext";
 
 const inputClass =
   "w-full  border border-forest/15 bg-white px-4 py-3 text-forest placeholder:text-forest/40 outline-none transition focus:border-leaf focus:ring-2 focus:ring-leaf/20";
 
 export default function ProductView() {
   const slug = useSearchParams().get("slug");
+  const router = useRouter();
+  const { addItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "notfound">("loading");
   const [activeImage, setActiveImage] = useState(0);
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
-  const [form, setForm] = useState({
-    customerName: "",
-    phone: "",
-    email: "",
-    address: "",
-    note: "",
-  });
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [added, setAdded] = useState(false);
 
   useEffect(() => {
     if (!slug) {
@@ -49,25 +44,28 @@ export default function ProductView() {
       .catch(() => setLoadState("notfound"));
   }, [slug]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function putInCart() {
     if (!product) return;
-    setStatus("loading");
-    setErrorMsg("");
-    try {
-      await submitOrder({
-        customerName: form.customerName.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        address: form.address.trim(),
-        note: form.note.trim(),
-        items: [{ productId: product.id, quantity, options: selected }],
-      });
-      setStatus("success");
-    } catch (err) {
-      setStatus("error");
-      setErrorMsg(err instanceof Error ? err.message : "Something went wrong");
-    }
+    addItem({
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      image: product.images[0] ?? null,
+      unitPrice: product.price,
+      unit: product.unit,
+      quantity,
+      options: selected,
+    });
+  }
+
+  function handleAddToCart() {
+    putInCart();
+    setAdded(true);
+  }
+
+  function handleOrderNow() {
+    putInCart();
+    router.push("/cart");
   }
 
   if (loadState === "loading") {
@@ -132,7 +130,7 @@ export default function ProductView() {
           )}
         </div>
 
-        {/* Details + order form */}
+        {/* Details */}
         <div>
           <h1 className="font-display text-3xl font-semibold text-forest md:text-4xl">
             {product.name}
@@ -150,19 +148,8 @@ export default function ProductView() {
             <p className="mt-8 rounded-none bg-red-50 px-5 py-4 text-sm text-red-700">
               This product is currently out of stock.
             </p>
-          ) : status === "success" ? (
-            <div className="mt-8 rounded-none border border-leaf/30 bg-sage/20 p-6 text-forest">
-              <p className="font-display text-xl font-semibold">Order request sent!</p>
-              <p className="mt-2 text-sm text-forest/70">
-                Thank you, {form.customerName}. We received your request for {quantity}{" "}
-                {product.name} and will contact you on {form.phone} shortly.
-              </p>
-              <Link href="/shop" className="mt-4 inline-block text-sm text-leaf underline">
-                Continue shopping
-              </Link>
-            </div>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <div className="mt-8 space-y-5">
               {product.options.map((opt) => (
                 <div key={opt.name}>
                   <p className="mb-2 text-sm font-medium text-forest">{opt.name}</p>
@@ -171,7 +158,10 @@ export default function ProductView() {
                       <button
                         key={v}
                         type="button"
-                        onClick={() => setSelected({ ...selected, [opt.name]: v })}
+                        onClick={() => {
+                          setSelected({ ...selected, [opt.name]: v });
+                          setAdded(false);
+                        }}
                         className={`rounded-none border px-4 py-2 text-sm transition ${
                           selected[opt.name] === v
                             ? "border-forest bg-forest text-cream"
@@ -191,7 +181,10 @@ export default function ProductView() {
                   type="number"
                   min={1}
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.floor(Number(e.target.value)) || 1))}
+                  onChange={(e) => {
+                    setQuantity(Math.max(1, Math.floor(Number(e.target.value)) || 1));
+                    setAdded(false);
+                  }}
                   className={`${inputClass} max-w-[10rem]`}
                 />
                 <p className="mt-2 text-sm text-forest/60">
@@ -200,63 +193,47 @@ export default function ProductView() {
                 </p>
               </div>
 
-              <div className="border-t border-forest/10 pt-5">
-                <p className="mb-4 text-sm font-medium text-forest">Your details</p>
-                <div className="grid gap-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <input
-                      required
-                      placeholder="Your name"
-                      value={form.customerName}
-                      onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-                      className={inputClass}
-                    />
-                    <input
-                      required
-                      placeholder="Phone number"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      className={inputClass}
-                    />
-                  </div>
-                  <input
-                    required
-                    placeholder="Delivery address"
-                    value={form.address}
-                    onChange={(e) => setForm({ ...form, address: e.target.value })}
-                    className={inputClass}
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email (optional)"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className={inputClass}
-                  />
-                  <textarea
-                    rows={3}
-                    placeholder="Note (optional)"
-                    value={form.note}
-                    onChange={(e) => setForm({ ...form, note: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-none border border-forest px-7 py-3.5 font-medium text-forest transition hover:bg-white"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Add to cart
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOrderNow}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-none bg-forest px-7 py-3.5 font-medium text-cream transition hover:bg-leaf"
+                >
+                  Order now
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
 
-              {status === "error" && <p className="text-sm text-red-600">{errorMsg}</p>}
+              {added && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-leaf/30 bg-sage/20 px-5 py-4 text-sm text-forest">
+                  <span className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-leaf" />
+                    Added to your cart
+                  </span>
+                  <span className="flex gap-4">
+                    <Link href="/cart" className="font-medium underline">
+                      View cart
+                    </Link>
+                    <Link href="/shop" className="underline">
+                      Continue shopping
+                    </Link>
+                  </span>
+                </div>
+              )}
 
-              <button
-                type="submit"
-                disabled={status === "loading"}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-none bg-forest px-7 py-3.5 font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
-              >
-                {status === "loading" ? "Sending..." : "Send order request"}
-                <Send className="h-4 w-4" />
-              </button>
               <p className="text-center text-xs text-forest/50">
-                No payment now. We&apos;ll contact you to confirm your order.
+                No payment now. You send an order request from your cart and we&apos;ll
+                contact you to confirm.
               </p>
-            </form>
+            </div>
           )}
         </div>
       </div>
