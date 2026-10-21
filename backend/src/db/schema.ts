@@ -84,3 +84,16 @@ export const orders = pgTable("orders", {
   status: text("status").notNull().default("new"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const galleryProjects = pgTable("gallery_projects", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  category: text("category").notNull().default("Landscaping"),
+  description: text("description").notNull().default(""),
+  location: text("location"), // general area only, never a street address
+  year: integer("year"),
+  images: jsonb("images").$type<string[]>().notNull().default([]),
+  isPublished: boolean("is_published").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

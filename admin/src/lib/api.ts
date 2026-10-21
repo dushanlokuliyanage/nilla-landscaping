@@ -172,3 +172,57 @@ export async function updateOrderStatus(id: number, status: OrderStatus) {
 export async function deleteOrder(id: number) {
   return request(`/api/orders/${id}`, { method: "DELETE" });
 }
+
+// ---- gallery ----
+export type GalleryProject = {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+  location: string | null;
+  year: number | null;
+  images: string[];
+  isPublished: boolean;
+  sortOrder: number;
+  createdAt: string;
+};
+
+export type GalleryProjectInput = {
+  title: string;
+  category: string;
+  description: string;
+  location: string | null;
+  year: number | null;
+  images: string[];
+  isPublished: boolean;
+};
+
+export async function getAllGalleryProjects(): Promise<GalleryProject[]> {
+  return request("/api/gallery/all");
+}
+
+export async function createGalleryProject(data: GalleryProjectInput): Promise<GalleryProject> {
+  return request("/api/gallery", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateGalleryProject(
+  id: number,
+  data: GalleryProjectInput
+): Promise<GalleryProject> {
+  return request(`/api/gallery/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function setGalleryPublished(id: number, isPublished: boolean) {
+  return request(`/api/gallery/${id}/published`, {
+    method: "PATCH",
+    body: JSON.stringify({ isPublished }),
+  });
+}
+
+export async function reorderGalleryProjects(ids: number[]) {
+  return request("/api/gallery/reorder", { method: "POST", body: JSON.stringify({ ids }) });
+}
+
+export async function deleteGalleryProject(id: number) {
+  return request(`/api/gallery/${id}`, { method: "DELETE" });
+}

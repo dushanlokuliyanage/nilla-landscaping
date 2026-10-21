@@ -6,6 +6,8 @@ import { productRoutes } from "./routes/products.js";
 import { orderRoutes } from "./routes/orders.js";
 import { adminRoutes } from "./routes/admin.js";
 import type { Env } from "./types.js";
+import { galleryRoutes } from "./routes/gallery.js";
+
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -25,5 +27,6 @@ app.route("/api/auth", authRoutes);
 app.route("/api/products", productRoutes);
 app.route("/api/orders", orderRoutes);
 app.route("/api/admin", adminRoutes);
+app.route("/api/gallery", galleryRoutes);
 
 export default app;

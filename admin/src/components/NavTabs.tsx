@@ -5,6 +5,7 @@ import { getCurrentAdmin } from "@/lib/api";
 const tabs = [
   { to: "/", label: "Inquiries" },
   { to: "/products", label: "Products", permission: "products" },
+    { to: "/gallery", label: "Gallery", permission: "products" },
   { to: "/orders", label: "Orders" },
   { to: "/activity", label: "Activity log", permission: "logs" },
   { to: "/access", label: "Access log", permission: "logs" },

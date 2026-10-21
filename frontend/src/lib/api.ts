@@ -79,3 +79,19 @@ export async function submitOrder(data: OrderInput) {
   if (!res.ok) throw new Error(await parseError(res, "Failed to send order request"));
   return res.json();
 }
+
+export type GalleryProject = {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+  location: string | null;
+  year: number | null;
+  images: string[];
+};
+
+export async function getGalleryProjects(): Promise<GalleryProject[]> {
+  const res = await fetch(`${API_URL}/api/gallery`);
+  if (!res.ok) throw new Error("Failed to load gallery");
+  return res.json();
+}

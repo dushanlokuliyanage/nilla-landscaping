@@ -12,6 +12,7 @@ const links = [
   { href: "/#why-us", label: "Why Us" },
   { href: "/#process", label: "Process" },
   { href: "/#contact", label: "Contact" },
+    { href: "/gallery", label: "Gallery" },
 ];
 
 export default function Navbar() {
