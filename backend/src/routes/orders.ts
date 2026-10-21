@@ -3,7 +3,8 @@ import { z } from "zod";
 import { eq, desc, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { orders, products, type OrderItem } from "../db/schema.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requirePermission } from "../middleware/auth.js";
+import { logActivity } from "../lib/logging.js";
 import { sendOrderNotification } from "../lib/email.js";
 import type { Env } from "../types.js";
 
@@ -91,27 +92,30 @@ orderRoutes.post("/", async (c) => {
 });
 
 // Admin: list orders
-orderRoutes.get("/", requireAuth, async (c) => {
+orderRoutes.get("/", requireAuth, requirePermission("orders.read"), async (c) => {
   const db = getDb(c.env.DATABASE_URL);
   const all = await db.select().from(orders).orderBy(desc(orders.createdAt));
   return c.json(all);
 });
 
 // Admin: change status
-orderRoutes.patch("/:id/status", requireAuth, async (c) => {
+orderRoutes.patch("/:id/status", requireAuth, requirePermission("orders.manage"), async (c) => {
   const id = Number(c.req.param("id"));
   const parsed = statusSchema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: "Invalid status" }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
-  await db.update(orders).set({ status: parsed.data.status }).where(eq(orders.id, id));
+  const [updated] = await db.update(orders).set({ status: parsed.data.status }).where(eq(orders.id, id)).returning({ id: orders.id, status: orders.status });
+  if (!updated) return c.json({ error: "Not found" }, 404);
+  await logActivity(c, "status_changed", "order", id, { status: updated.status });
   return c.json({ success: true });
 });
 
 // Admin: delete
-orderRoutes.delete("/:id", requireAuth, async (c) => {
+orderRoutes.delete("/:id", requireAuth, requirePermission("orders.manage"), async (c) => {
   const id = Number(c.req.param("id"));
   const db = getDb(c.env.DATABASE_URL);
-  await db.delete(orders).where(eq(orders.id, id));
+  const [deleted] = await db.delete(orders).where(eq(orders.id, id)).returning({ id: orders.id });
+  if (deleted) await logActivity(c, "deleted", "order", id);
   return c.json({ success: true });
 });

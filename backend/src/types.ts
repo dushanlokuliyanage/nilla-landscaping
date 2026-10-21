@@ -5,3 +5,11 @@ export type Env = {
   ADMIN_EMAIL: string;
   FRONTEND_URL: string;
 };
+
+export type AdminIdentity = { id: number; email: string; role: string };
+
+declare module "hono" {
+  interface ContextVariableMap {
+    admin: AdminIdentity;
+  }
+}

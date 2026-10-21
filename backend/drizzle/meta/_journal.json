@@ -15,6 +15,13 @@
       "when": 1792008141850,
       "tag": "0001_remarkable_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792454400000,
+      "tag": "0002_admin_roles_logs",
+      "breakpoints": true
     }
   ]
 }

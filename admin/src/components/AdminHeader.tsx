@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
-import { logout } from "@/lib/api";
+import { logoutWithLog } from "@/lib/api";
 
 export default function AdminHeader({ unreadCount }: { unreadCount?: number }) {
   const navigate = useNavigate();
 
   function handleLogout() {
-    logout();
+    void logoutWithLog();
     navigate("/login");
   }
 

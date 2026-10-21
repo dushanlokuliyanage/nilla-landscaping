@@ -4,6 +4,7 @@ import { inquiryRoutes } from "./routes/inquiries.js";
 import { authRoutes } from "./routes/auth.js";
 import { productRoutes } from "./routes/products.js";
 import { orderRoutes } from "./routes/orders.js";
+import { adminRoutes } from "./routes/admin.js";
 import type { Env } from "./types.js";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -23,5 +24,6 @@ app.route("/api/inquiries", inquiryRoutes);
 app.route("/api/auth", authRoutes);
 app.route("/api/products", productRoutes);
 app.route("/api/orders", orderRoutes);
+app.route("/api/admin", adminRoutes);
 
 export default app;

@@ -4,6 +4,8 @@ import Dashboard from "@/pages/Dashboard";
 import Products from "@/pages/Products";
 import Orders from "@/pages/Orders";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import Team from "@/pages/Team";
+import Logs from "@/pages/Logs";
 
 export default function App() {
   return (
@@ -18,6 +20,9 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
+        <Route path="/activity" element={<ProtectedRoute><Logs kind="activity" /></ProtectedRoute>} />
+        <Route path="/access" element={<ProtectedRoute><Logs kind="access" /></ProtectedRoute>} />
         <Route
           path="/products"
           element={

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { products } from "../db/schema.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requirePermission } from "../middleware/auth.js";
+import { logActivity } from "../lib/logging.js";
 import type { Env } from "../types.js";
 
 const productSchema = z.object({
@@ -52,7 +53,7 @@ productRoutes.get("/:slug", async (c) => {
 });
 
 // Admin: create
-productRoutes.post("/", requireAuth, async (c) => {
+productRoutes.post("/", requireAuth, requirePermission("products.manage"), async (c) => {
   const parsed = productSchema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
@@ -72,11 +73,12 @@ productRoutes.post("/", requireAuth, async (c) => {
     .insert(products)
     .values({ ...parsed.data, slug })
     .returning();
+  await logActivity(c, "created", "product", created.id, { name: created.name });
   return c.json(created, 201);
 });
 
 // Admin: update (slug stays the same so links don't break)
-productRoutes.put("/:id", requireAuth, async (c) => {
+productRoutes.put("/:id", requireAuth, requirePermission("products.manage"), async (c) => {
   const id = Number(c.req.param("id"));
   const parsed = productSchema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
@@ -88,13 +90,15 @@ productRoutes.put("/:id", requireAuth, async (c) => {
     .where(eq(products.id, id))
     .returning();
   if (!updated) return c.json({ error: "Not found" }, 404);
+  await logActivity(c, "updated", "product", updated.id, { name: updated.name });
   return c.json(updated);
 });
 
 // Admin: delete
-productRoutes.delete("/:id", requireAuth, async (c) => {
+productRoutes.delete("/:id", requireAuth, requirePermission("products.manage"), async (c) => {
   const id = Number(c.req.param("id"));
   const db = getDb(c.env.DATABASE_URL);
-  await db.delete(products).where(eq(products.id, id));
+  const [deleted] = await db.delete(products).where(eq(products.id, id)).returning({ name: products.name });
+  if (deleted) await logActivity(c, "deleted", "product", id, { name: deleted.name });
   return c.json({ success: true });
 });

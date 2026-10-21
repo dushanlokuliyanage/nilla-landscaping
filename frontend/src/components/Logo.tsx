@@ -16,7 +16,7 @@ export default function Logo() {
           Nilla
         </span>
         <span className="block mt-1 text-[10px] uppercase tracking-[0.18em] text-forest/60">
-          Landscaping &amp; Garden
+          Landscaping &amp; Garden (PVT) LTD
         </span>
       </span>
     </span>
