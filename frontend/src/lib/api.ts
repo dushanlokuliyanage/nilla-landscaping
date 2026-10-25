@@ -1,4 +1,13 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const PRODUCTION_API_URL = "https://nilla-garden-backend.nilla-garden.workers.dev";
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+
+// `.env.local` is loaded during static production builds too. If it contains
+// the local dev URL, use the deployed API in the exported site instead.
+const API_URL =
+  process.env.NODE_ENV === "production" &&
+  (!configuredApiUrl || /^https?:\/\/localhost(?::\d+)?$/i.test(configuredApiUrl))
+    ? PRODUCTION_API_URL
+    : configuredApiUrl || PRODUCTION_API_URL;
 
 export type ProductOption = { name: string; values: string[] };
 
@@ -95,3 +104,19 @@ export async function getGalleryProjects(): Promise<GalleryProject[]> {
   if (!res.ok) throw new Error("Failed to load gallery");
   return res.json();
 }
+
+export type Video = {
+  id: number;
+  title: string;
+  category: string;
+  videoUrl: string;
+  posterUrl: string;
+  orientation: "vertical" | "landscape";
+};
+
+export async function getVideos(): Promise<Video[]> {
+  const res = await fetch(`${API_URL}/api/videos`);
+  if (!res.ok) throw new Error("Failed to load videos");
+  return res.json();
+}
+

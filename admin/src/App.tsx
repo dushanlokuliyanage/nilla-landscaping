@@ -7,15 +7,14 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Team from "@/pages/Team";
 import Logs from "@/pages/Logs";
 import Gallery from "@/pages/Gallery";
+import Videos from "@/pages/Videos";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
+        <Route path="/"  element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
@@ -24,18 +23,15 @@ export default function App() {
         <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
         <Route path="/activity" element={<ProtectedRoute><Logs kind="activity" /></ProtectedRoute>} />
         <Route path="/access" element={<ProtectedRoute><Logs kind="access" /></ProtectedRoute>} />
-                <Route path="/gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
-        <Route
-          path="/products"
-          element={
+        <Route path="/gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
+        <Route path="/videos" element={<ProtectedRoute><Videos /></ProtectedRoute>} />
+        <Route path="/products" element={
             <ProtectedRoute>
               <Products />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/orders"
-          element={
+        <Route path="/orders" element={
             <ProtectedRoute>
               <Orders />
             </ProtectedRoute>

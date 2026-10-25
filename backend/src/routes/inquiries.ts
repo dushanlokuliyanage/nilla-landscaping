@@ -16,6 +16,11 @@ const inquirySchema = z.object({
   message: z.string().min(5),
 });
 
+const followUpSchema = z.object({
+  status: z.enum(["new", "contacted", "quoted", "won", "lost"]),
+  note: z.string().max(2000).nullable(),
+});
+
 export const inquiryRoutes = new Hono<{ Bindings: Env }>();
 
 inquiryRoutes.post("/", async (c) => {
@@ -49,6 +54,22 @@ inquiryRoutes.patch("/:id/read", requireAuth, requirePermission("inquiries.manag
   const id = Number(c.req.param("id"));
   const [updated] = await db.update(inquiries).set({ isRead: true }).where(eq(inquiries.id, id)).returning({ id: inquiries.id });
   if (updated) await logActivity(c, "marked_read", "inquiry", id);
+  return c.json({ success: true });
+});
+
+inquiryRoutes.patch("/:id/follow-up", requireAuth, requirePermission("inquiries.manage"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id) || id < 1) return c.json({ error: "Invalid inquiry" }, 400);
+  const parsed = followUpSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "Invalid follow-up details" }, 400);
+
+  const [updated] = await getDb(c.env.DATABASE_URL)
+    .update(inquiries)
+    .set({ followUpStatus: parsed.data.status, followUpNote: parsed.data.note?.trim() || null })
+    .where(eq(inquiries.id, id))
+    .returning({ id: inquiries.id });
+  if (!updated) return c.json({ error: "Inquiry not found" }, 404);
+  await logActivity(c, "follow_up_updated", "inquiry", id, { status: parsed.data.status });
   return c.json({ success: true });
 });
 

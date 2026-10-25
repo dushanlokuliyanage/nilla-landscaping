@@ -5,6 +5,7 @@ import WhyUs from "@/components/WhyUs";
 import Process from "@/components/Process";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
+import VideoCarousel from "@/components/VideoCarousel";
 
 export default function Home() {
   return (
@@ -13,6 +14,7 @@ export default function Home() {
       <main>
         <Hero />
         <Services />
+        <VideoCarousel />
         <WhyUs />
         <Process />
         <Contact />

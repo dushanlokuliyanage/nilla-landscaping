@@ -1,6 +1,9 @@
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-const MAX_BYTES = 10 * 1024 * 1024;
+const VIDEO_PRESET = import.meta.env.VITE_CLOUDINARY_VIDEO_PRESET;
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
 
 export async function uploadImage(file: File): Promise<string> {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
@@ -9,7 +12,7 @@ export async function uploadImage(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) {
     throw new Error(`${file.name} is not an image`);
   }
-  if (file.size > MAX_BYTES) {
+  if (file.size > MAX_IMAGE_BYTES) {
     throw new Error(`${file.name} is larger than 10 MB`);
   }
 
@@ -27,9 +30,74 @@ export async function uploadImage(file: File): Promise<string> {
     throw new Error(data?.error?.message ?? "Upload failed");
   }
 
-  // Smaller, faster images for the shop: auto format and quality, max 1200px wide
   return (data.secure_url as string).replace(
     "/upload/",
     "/upload/f_auto,q_auto,w_1200/"
   );
+}
+
+type CloudinaryResult = {
+  secure_url?: string;
+  error?: { message?: string };
+};
+
+export function uploadVideo(
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<{ videoUrl: string; posterUrl: string }> {
+  return new Promise((resolve, reject) => {
+    if (!CLOUD_NAME || !VIDEO_PRESET) {
+      reject(new Error("Video upload is not set up yet (Cloudinary video preset missing)"));
+      return;
+    }
+    if (!file.type.startsWith("video/")) {
+      reject(new Error(`${file.name} is not a video`));
+      return;
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      reject(new Error("This video is larger than 40 MB. Compress it or use a shorter clip."));
+      return;
+    }
+
+    const body = new FormData();
+    body.append("file", file);
+    body.append("upload_preset", VIDEO_PRESET);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      let data: CloudinaryResult = {};
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        // keep the empty result
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300 && data.secure_url) {
+        const base = data.secure_url;
+        resolve({
+          // Small, phone-friendly mp4 that plays in every browser
+          videoUrl: base
+            .replace("/upload/", "/upload/q_auto,w_540,vc_h264/")
+            .replace(/\.[a-z0-9]+$/i, ".mp4"),
+          // A picture from the first second of the video
+          posterUrl: base
+            .replace("/upload/", "/upload/so_0,w_540/")
+            .replace(/\.[a-z0-9]+$/i, ".jpg"),
+        });
+      } else {
+        reject(new Error(data.error?.message ?? "Video upload failed"));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.send(body);
+  });
 }

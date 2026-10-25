@@ -16,6 +16,8 @@ export const inquiries = pgTable("inquiries", {
   service: text("service"),
   message: text("message").notNull(),
   isRead: boolean("is_read").notNull().default(false),
+  followUpStatus: text("follow_up_status").notNull().default("new"),
+  followUpNote: text("follow_up_note"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -93,6 +95,18 @@ export const galleryProjects = pgTable("gallery_projects", {
   location: text("location"), // general area only, never a street address
   year: integer("year"),
   images: jsonb("images").$type<string[]>().notNull().default([]),
+  isPublished: boolean("is_published").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const videos = pgTable("videos", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  category: text("category").notNull().default("Landscaping"),
+  videoUrl: text("video_url").notNull(),
+  posterUrl: text("poster_url").notNull().default(""),
+  orientation: text("orientation").notNull().default("vertical"),
   isPublished: boolean("is_published").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),

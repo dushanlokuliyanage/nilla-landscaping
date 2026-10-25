@@ -1,4 +1,10 @@
-const API_URL = import.meta.env.VITE_API_URL;
+const PRODUCTION_API_URL = "https://nilla-garden-backend.nilla-garden.workers.dev";
+const configuredApiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
+const API_URL =
+  import.meta.env.PROD &&
+  (!configuredApiUrl || /^https?:\/\/localhost(?::\d+)?$/i.test(configuredApiUrl))
+    ? PRODUCTION_API_URL
+    : configuredApiUrl || PRODUCTION_API_URL;
 
 export type Inquiry = {
   id: number;
@@ -8,6 +14,8 @@ export type Inquiry = {
   service: string | null;
   message: string;
   isRead: boolean;
+  followUpStatus: "new" | "contacted" | "quoted" | "won" | "lost";
+  followUpNote: string | null;
   createdAt: string;
 };
 
@@ -136,6 +144,13 @@ export async function markAsRead(id: number) {
   return request(`/api/inquiries/${id}/read`, { method: "PATCH" });
 }
 
+export async function updateInquiryFollowUp(id: number, status: Inquiry["followUpStatus"], note: string) {
+  return request(`/api/inquiries/${id}/follow-up`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, note: note.trim() || null }),
+  });
+}
+
 export async function deleteInquiry(id: number) {
   return request(`/api/inquiries/${id}`, { method: "DELETE" });
 }
@@ -225,4 +240,53 @@ export async function reorderGalleryProjects(ids: number[]) {
 
 export async function deleteGalleryProject(id: number) {
   return request(`/api/gallery/${id}`, { method: "DELETE" });
+}
+
+// ---- videos ----
+export type VideoItem = {
+  id: number;
+  title: string;
+  category: string;
+  videoUrl: string;
+  posterUrl: string;
+  orientation: "vertical" | "landscape";
+  isPublished: boolean;
+  sortOrder: number;
+  createdAt: string;
+};
+
+export type VideoInput = {
+  title: string;
+  category: string;
+  videoUrl: string;
+  posterUrl: string;
+  orientation: "vertical" | "landscape";
+  isPublished: boolean;
+};
+
+export async function getAllVideos(): Promise<VideoItem[]> {
+  return request("/api/videos/all");
+}
+
+export async function createVideo(data: VideoInput): Promise<VideoItem> {
+  return request("/api/videos", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateVideo(id: number, data: VideoInput): Promise<VideoItem> {
+  return request(`/api/videos/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function setVideoPublished(id: number, isPublished: boolean) {
+  return request(`/api/videos/${id}/published`, {
+    method: "PATCH",
+    body: JSON.stringify({ isPublished }),
+  });
+}
+
+export async function reorderVideos(ids: number[]) {
+  return request("/api/videos/reorder", { method: "POST", body: JSON.stringify({ ids }) });
+}
+
+export async function deleteVideo(id: number) {
+  return request(`/api/videos/${id}`, { method: "DELETE" });
 }
