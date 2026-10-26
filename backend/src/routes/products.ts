@@ -21,7 +21,7 @@ const productSchema = z.object({
       })
     )
     .default([]),
-  inStock: z.boolean().default(true),
+  stockQuantity: z.number().int().min(0).default(0),
 });
 
 function slugify(text: string) {
@@ -71,7 +71,7 @@ productRoutes.post("/", requireAuth, requirePermission("products.manage"), async
 
   const [created] = await db
     .insert(products)
-    .values({ ...parsed.data, slug })
+    .values({ ...parsed.data, slug, inStock: parsed.data.stockQuantity > 0 })
     .returning();
   await logActivity(c, "created", "product", created.id, { name: created.name });
   return c.json(created, 201);
@@ -86,7 +86,7 @@ productRoutes.put("/:id", requireAuth, requirePermission("products.manage"), asy
   const db = getDb(c.env.DATABASE_URL);
   const [updated] = await db
     .update(products)
-    .set(parsed.data)
+    .set({ ...parsed.data, inStock: parsed.data.stockQuantity > 0 })
     .where(eq(products.id, id))
     .returning();
   if (!updated) return c.json({ error: "Not found" }, 404);

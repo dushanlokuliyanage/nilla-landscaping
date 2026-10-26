@@ -30,6 +30,7 @@ export type Product = {
   unit: string;
   images: string[];
   options: ProductOption[];
+  stockQuantity: number;
   inStock: boolean;
   createdAt: string;
 };

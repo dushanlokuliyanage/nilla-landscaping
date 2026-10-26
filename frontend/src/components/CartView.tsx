@@ -84,8 +84,10 @@ export default function CartView() {
   return (
     <div className="grid gap-10 lg:grid-cols-[1fr_24rem]">
       <ul className="space-y-4">
-        {items.map((i) => (
-          <li
+        {items.map((i) => {
+          const otherProductQuantity = items.filter((other) => other.productId === i.productId && other.key !== i.key).reduce((sum, other) => sum + other.quantity, 0);
+          const maxForLine = Math.max(0, i.stockQuantity - otherProductQuantity);
+          return <li
             key={i.key}
             className="flex gap-4 border border-forest/10 bg-white/60 p-4"
           >
@@ -143,15 +145,18 @@ export default function CartView() {
                   <input
                     type="number"
                     min={1}
+                    max={maxForLine}
                     value={i.quantity}
                     onChange={(e) => setQuantity(i.key, Number(e.target.value))}
+                    disabled={maxForLine === 0}
                     className="h-9 w-20 border border-forest/15 bg-white text-center text-forest outline-none focus:border-leaf"
                   />
                   <button
                     type="button"
                     onClick={() => setQuantity(i.key, i.quantity + 1)}
+                    disabled={i.quantity >= maxForLine}
                     aria-label="Increase quantity"
-                    className="flex h-9 w-9 items-center justify-center border border-forest/20 text-forest transition hover:bg-white"
+                    className="flex h-9 w-9 items-center justify-center border border-forest/20 text-forest transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-35"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -162,8 +167,8 @@ export default function CartView() {
                 </p>
               </div>
             </div>
-          </li>
-        ))}
+          </li>;
+        })}
       </ul>
 
       <form

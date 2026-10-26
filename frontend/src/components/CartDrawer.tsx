@@ -49,8 +49,11 @@ export default function CartDrawer() {
           </div>
         ) : <>
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
-            {items.map((item) => (
-              <article key={item.key} className="flex gap-3 border border-forest/10 bg-white p-3">
+            {items.map((item) => {
+              const otherProductQuantity = items.filter((other) => other.productId === item.productId && other.key !== item.key).reduce((sum, other) => sum + other.quantity, 0);
+              const maxForLine = Math.max(0, item.stockQuantity - otherProductQuantity);
+              const unitLabel = item.unit.replace(/^per\s+/i, "");
+              return <article key={item.key} className="flex gap-3 border border-forest/10 bg-white p-3">
                 <Link href={`/product?slug=${encodeURIComponent(item.slug)}`} onClick={closeDrawer} className="h-20 w-20 shrink-0 bg-sage/15">
                   {item.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center"><Leaf className="h-7 w-7 text-forest/20" /></span>}
                 </Link>
@@ -65,13 +68,14 @@ export default function CartDrawer() {
                     <div className="flex items-center border border-forest/15">
                       <button type="button" onClick={() => setQuantity(item.key, item.quantity - 1)} aria-label={`Decrease ${item.name} quantity`} className="p-1.5 text-forest hover:bg-sage/15"><Minus className="h-3.5 w-3.5" /></button>
                       <span className="min-w-8 px-1 text-center text-xs tabular-nums text-forest">{item.quantity}</span>
-                      <button type="button" onClick={() => setQuantity(item.key, item.quantity + 1)} aria-label={`Increase ${item.name} quantity`} className="p-1.5 text-forest hover:bg-sage/15"><Plus className="h-3.5 w-3.5" /></button>
+                      <button type="button" onClick={() => setQuantity(item.key, item.quantity + 1)} disabled={item.quantity >= maxForLine} aria-label={`Increase ${item.name} quantity`} className="p-1.5 text-forest hover:bg-sage/15 disabled:cursor-not-allowed disabled:opacity-35"><Plus className="h-3.5 w-3.5" /></button>
                     </div>
                     <span className="text-sm font-semibold text-forest">{money(item.unitPrice * item.quantity)}</span>
                   </div>
+                  <p className="mt-1 text-[11px] text-forest/45">{item.stockQuantity} {unitLabel} in stock</p>
                 </div>
-              </article>
-            ))}
+              </article>;
+            })}
           </div>
 
           <footer className="border-t border-forest/10 bg-white px-5 py-5 sm:px-6">

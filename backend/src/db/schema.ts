@@ -73,6 +73,7 @@ export const products = pgTable("products", {
   unit: text("unit").notNull().default("per kg"),
   images: jsonb("images").$type<string[]>().notNull().default([]),
   options: jsonb("options").$type<ProductOption[]>().notNull().default([]),
+  stockQuantity: integer("stock_quantity").notNull().default(0),
   inStock: boolean("in_stock").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

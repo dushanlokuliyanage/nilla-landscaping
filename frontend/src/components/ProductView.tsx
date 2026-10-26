@@ -13,7 +13,7 @@ const inputClass =
 export default function ProductView() {
   const slug = useSearchParams().get("slug");
   const router = useRouter();
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "notfound">("loading");
@@ -54,16 +54,20 @@ export default function ProductView() {
       unitPrice: product.price,
       unit: product.unit,
       quantity,
+      stockQuantity: product.stockQuantity,
       options: selected,
     }, showDrawer);
   }
 
   function handleAddToCart() {
+    if (!product || quantity > remaining) return;
     putInCart();
     setAdded(true);
+    setQuantity(1);
   }
 
   function handleOrderNow() {
+    if (!product || quantity > remaining) return;
     putInCart(false);
     router.push("/cart");
   }
@@ -84,6 +88,9 @@ export default function ProductView() {
   }
 
   const total = product.price * quantity;
+  const alreadyInCart = items.filter((item) => item.productId === product.id).reduce((sum, item) => sum + item.quantity, 0);
+  const remaining = Math.max(0, product.stockQuantity - alreadyInCart);
+  const unitLabel = product.unit.replace(/^per\s+/i, "");
 
   return (
     <div>
@@ -144,7 +151,7 @@ export default function ProductView() {
             <p className="mt-5 whitespace-pre-line text-forest/70">{product.description}</p>
           )}
 
-          {!product.inStock ? (
+          {!product.inStock || product.stockQuantity <= 0 ? (
             <p className="mt-8 rounded-none bg-red-50 px-5 py-4 text-sm text-red-700">
               This product is currently out of stock.
             </p>
@@ -180,13 +187,19 @@ export default function ProductView() {
                 <input
                   type="number"
                   min={1}
+                  max={Math.max(1, remaining)}
                   value={quantity}
                   onChange={(e) => {
-                    setQuantity(Math.max(1, Math.floor(Number(e.target.value)) || 1));
+                    const requested = Math.max(1, Math.floor(Number(e.target.value)) || 1);
+                    setQuantity(Math.min(Math.max(1, remaining), requested));
                     setAdded(false);
                   }}
+                  disabled={remaining === 0}
                   className={`${inputClass} max-w-[10rem]`}
                 />
+                <p className="mt-2 text-sm text-forest/60">
+                  {remaining > 0 ? `${remaining} ${unitLabel} available${alreadyInCart > 0 ? ` · ${alreadyInCart} already in your cart` : ""}` : "You have added all currently available stock to your cart."}
+                </p>
                 <p className="mt-2 text-sm text-forest/60">
                   Estimated total:{" "}
                   <span className="font-semibold text-forest">Rs. {total.toLocaleString()}</span>
@@ -197,6 +210,7 @@ export default function ProductView() {
                 <button
                   type="button"
                   onClick={handleAddToCart}
+                  disabled={remaining === 0 || quantity > remaining}
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-none border border-forest px-7 py-3.5 font-medium text-forest transition hover:bg-white"
                 >
                   <ShoppingBag className="h-4 w-4" />
@@ -205,6 +219,7 @@ export default function ProductView() {
                 <button
                   type="button"
                   onClick={handleOrderNow}
+                  disabled={remaining === 0 || quantity > remaining}
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-none bg-forest px-7 py-3.5 font-medium text-cream transition hover:bg-leaf"
                 >
                   Order now

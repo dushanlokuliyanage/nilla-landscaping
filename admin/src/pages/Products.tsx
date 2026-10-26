@@ -44,7 +44,7 @@ type FormState = {
   description: string;
   price: string;
   unit: string;
-  inStock: boolean;
+  stockQuantity: string;
   images: string[];
   options: string;
 };
@@ -54,7 +54,7 @@ const emptyForm: FormState = {
   description: "",
   price: "",
   unit: "per kg",
-  inStock: true,
+  stockQuantity: "0",
   images: [],
   options: "",
 };
@@ -65,7 +65,7 @@ function toForm(p: Product): FormState {
     description: p.description,
     price: String(p.price),
     unit: p.unit,
-    inStock: p.inStock,
+    stockQuantity: String(p.stockQuantity),
     images: [...p.images],
     options: optionsToText(p.options),
   };
@@ -163,21 +163,35 @@ export default function Products() {
       setError("Price must be a whole number (LKR)");
       return;
     }
+    const stockQuantity = Number(form.stockQuantity);
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
+      setError("Stock quantity must be a whole number zero or greater");
+      return;
+    }
 
     const payload: ProductInput = {
       name: form.name.trim(),
       description: form.description.trim(),
       price,
       unit: form.unit.trim() || "per kg",
-      inStock: form.inStock,
+      stockQuantity,
+      inStock: stockQuantity > 0,
       images: form.images,
       options: textToOptions(form.options),
     };
 
     setSaving(true);
     try {
-      if (editing === "new") await createProduct(payload);
-      else if (editing) await updateProduct(editing.id, payload);
+      const saved = editing === "new"
+        ? await createProduct(payload)
+        : editing
+          ? await updateProduct(editing.id, payload)
+          : null;
+      if (saved && saved.stockQuantity !== stockQuantity) {
+        throw new Error(
+          "The API did not save the stock quantity. Apply the stock migration and deploy the latest backend, then try again."
+        );
+      }
       await load();
       setEditing(null);
     } catch (err) {
@@ -239,10 +253,10 @@ export default function Products() {
                     <h3 className="font-semibold text-forest">{p.name}</h3>
                     <span
                       className={`shrink-0  px-2.5 py-0.5 text-xs ${
-                        p.inStock ? "bg-sage/40 text-forest" : "bg-red-100 text-red-700"
+                        p.stockQuantity > 0 ? "bg-sage/40 text-forest" : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {p.inStock ? "In stock" : "Out of stock"}
+                      {p.stockQuantity > 0 ? `${p.stockQuantity} ${p.unit.replace(/^per\s+/i, "")} in stock` : "Out of stock"}
                     </span>
                   </div>
 
@@ -390,14 +404,17 @@ export default function Products() {
                 </div>
               </Field>
 
-              <label className="flex items-center gap-2 text-sm text-forest">
+              <Field label="Stock quantity" hint="Available units for this product. Set to 0 to hide it from ordering.">
                 <input
-                  type="checkbox"
-                  checked={form.inStock}
-                  onChange={(e) => setForm({ ...form, inStock: e.target.checked })}
+                  required
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.stockQuantity}
+                  onChange={(e) => setForm({ ...form, stockQuantity: e.target.value })}
+                  className={inputClass}
                 />
-                In stock
-              </label>
+              </Field>
             </div>
 
             {error && <p className="mt-4 text-sm text-red-600">{error}</p>}

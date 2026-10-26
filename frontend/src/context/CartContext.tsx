@@ -11,6 +11,7 @@ export type CartItem = {
   unitPrice: number;
   unit: string;
   quantity: number;
+  stockQuantity: number;
   options: Record<string, string>;
 };
 
@@ -67,7 +68,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 typeof i.key === "string" &&
                 typeof i.productId === "number" &&
                 typeof i.quantity === "number"
-            )
+            ).map((i) => ({ ...i, stockQuantity: Number.isInteger(i.stockQuantity) ? i.stockQuantity : i.quantity }))
           );
         }
       }
@@ -99,22 +100,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       addItem: (item, showDrawer = true) => {
         const key = makeKey(item.productId, item.options);
         setItems((prev) => {
+          const alreadyInCart = prev
+            .filter((i) => i.productId === item.productId)
+            .reduce((sum, i) => sum + i.quantity, 0);
+          const availableToAdd = Math.max(0, item.stockQuantity - alreadyInCart);
+          if (availableToAdd === 0) return prev;
+          const quantityToAdd = Math.min(clampQuantity(item.quantity), availableToAdd);
           const existing = prev.find((i) => i.key === key);
           if (existing) {
             return prev.map((i) =>
               i.key === key
-                ? { ...i, unitPrice: item.unitPrice, quantity: clampQuantity(i.quantity + item.quantity) }
+                ? { ...i, ...item, quantity: i.quantity + quantityToAdd }
                 : i
             );
           }
-          return [...prev, { ...item, key, quantity: clampQuantity(item.quantity) }];
+          return [...prev, { ...item, key, quantity: quantityToAdd }];
         });
         if (showDrawer) setDrawerOpen(true);
       },
-      setQuantity: (key, quantity) =>
-        setItems((prev) =>
-          prev.map((i) => (i.key === key ? { ...i, quantity: clampQuantity(quantity) } : i))
-        ),
+      setQuantity: (key, quantity) => setItems((prev) => {
+        const current = prev.find((item) => item.key === key);
+        if (!current) return prev;
+        const otherProductQuantity = prev
+          .filter((item) => item.productId === current.productId && item.key !== key)
+          .reduce((sum, item) => sum + item.quantity, 0);
+        const lineLimit = Math.max(0, current.stockQuantity - otherProductQuantity);
+        if (lineLimit === 0) return prev.filter((item) => item.key !== key);
+        return prev.map((item) => item.key === key
+          ? { ...item, quantity: Math.min(clampQuantity(quantity), lineLimit) }
+          : item);
+      }),
       removeItem: (key) => setItems((prev) => prev.filter((i) => i.key !== key)),
       clear: () => setItems([]),
     };

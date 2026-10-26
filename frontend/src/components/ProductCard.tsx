@@ -6,9 +6,12 @@ import type { Product } from "@/lib/api";
 import { useCart } from "@/context/CartContext";
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
   const productHref = `/product?slug=${encodeURIComponent(product.slug)}`;
   const hasOptions = product.options.length > 0;
+  const alreadyInCart = items.filter((item) => item.productId === product.id).reduce((sum, item) => sum + item.quantity, 0);
+  const remaining = Math.max(0, product.stockQuantity - alreadyInCart);
+  const unitLabel = product.unit.replace(/^per\s+/i, "");
 
   function addToCart() {
     addItem({
@@ -19,6 +22,7 @@ export default function ProductCard({ product }: { product: Product }) {
       unitPrice: product.price,
       unit: product.unit,
       quantity: 1,
+      stockQuantity: product.stockQuantity,
       options: {},
     });
   }
@@ -38,7 +42,7 @@ export default function ProductCard({ product }: { product: Product }) {
             <Leaf className="h-10 w-10 text-forest/20" />
           </div>
         )}
-        {!product.inStock && (
+        {(!product.inStock || product.stockQuantity <= 0) && (
           <span className="absolute left-3 top-3 rounded-none bg-white px-3 py-1 text-xs font-medium text-red-600">
             Out of stock
           </span>
@@ -52,15 +56,18 @@ export default function ProductCard({ product }: { product: Product }) {
       </Link>
 
       <div className="mt-auto flex items-center justify-between gap-3 p-5">
-        <p className="font-medium text-leaf">Rs. {product.price.toLocaleString()} <span className="text-sm font-normal text-forest/50">{product.unit}</span></p>
+        <div>
+          <p className="font-medium text-leaf">Rs. {product.price.toLocaleString()} <span className="text-sm font-normal text-forest/50">{product.unit}</span></p>
+          {product.stockQuantity > 0 && <p className="mt-1 text-xs text-forest/50">{remaining} {unitLabel} available to add</p>}
+        </div>
 
-        {product.inStock && (hasOptions ? (
+        {product.inStock && product.stockQuantity > 0 && (hasOptions ? (
           <Link href={productHref} className="inline-flex shrink-0 items-center gap-1.5 bg-forest px-3.5 py-2 text-sm font-medium text-cream transition hover:bg-leaf">
             Choose options <ArrowRight className="h-4 w-4" />
           </Link>
         ) : (
-          <button type="button" onClick={addToCart} className="inline-flex shrink-0 items-center gap-1.5 bg-forest px-3.5 py-2 text-sm font-medium text-cream transition hover:bg-leaf">
-            <ShoppingBag className="h-4 w-4" /> Add to cart
+          <button type="button" onClick={addToCart} disabled={remaining === 0} className="inline-flex shrink-0 items-center gap-1.5 bg-forest px-3.5 py-2 text-sm font-medium text-cream transition hover:bg-leaf disabled:cursor-not-allowed disabled:bg-forest/40">
+            <ShoppingBag className="h-4 w-4" /> {remaining > 0 ? "Add to cart" : "Stock in cart"}
           </button>
         ))}
       </div>

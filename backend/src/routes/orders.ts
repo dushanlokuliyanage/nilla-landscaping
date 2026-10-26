@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and, gte, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { orders, products, type OrderItem } from "../db/schema.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
@@ -31,6 +31,20 @@ const statusSchema = z.object({
 
 export const orderRoutes = new Hono<{ Bindings: Env }>();
 
+async function restoreStock(db: ReturnType<typeof getDb>, reserved: Map<number, number>) {
+  await Promise.all([...reserved.entries()].map(([productId, quantity]) =>
+    db.update(products)
+      .set({ stockQuantity: sql`${products.stockQuantity} + ${quantity}`, inStock: true })
+      .where(eq(products.id, productId))
+  ));
+}
+
+function orderQuantities(items: OrderItem[]) {
+  const quantities = new Map<number, number>();
+  for (const item of items) quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+  return quantities;
+}
+
 // Public: customer sends an order request
 orderRoutes.post("/", async (c) => {
   const parsed = orderSchema.safeParse(await c.req.json());
@@ -43,11 +57,19 @@ orderRoutes.post("/", async (c) => {
 
   // Build items from the database, never trust prices sent by the browser
   const items: OrderItem[] = [];
+  const requestedByProduct = new Map<number, number>();
+  for (const line of data.items) {
+    requestedByProduct.set(line.productId, (requestedByProduct.get(line.productId) ?? 0) + line.quantity);
+  }
   for (const line of data.items) {
     const product = found.find((p) => p.id === line.productId);
     if (!product) return c.json({ error: "Product not found" }, 400);
-    if (!product.inStock) {
+    const requestedQuantity = requestedByProduct.get(product.id) ?? line.quantity;
+    if (!product.inStock || product.stockQuantity <= 0) {
       return c.json({ error: `${product.name} is out of stock` }, 400);
+    }
+    if (requestedQuantity > product.stockQuantity) {
+      return c.json({ error: `Only ${product.stockQuantity} units of ${product.name} are currently available` }, 400);
     }
 
     const options: Record<string, string> = {};
@@ -72,23 +94,44 @@ orderRoutes.post("/", async (c) => {
     });
   }
 
-  const [created] = await db
-    .insert(orders)
-    .values({
-      customerName: data.customerName,
-      phone: data.phone,
-      email: data.email || null,
-      address: data.address || null,
-      note: data.note || null,
-      items,
-    })
-    .returning();
+  const reserved = new Map<number, number>();
+  try {
+    for (const [productId, quantity] of requestedByProduct) {
+      const [updatedProduct] = await db.update(products).set({
+        stockQuantity: sql`${products.stockQuantity} - ${quantity}`,
+        inStock: sql<boolean>`${products.stockQuantity} - ${quantity} > 0`,
+      }).where(and(eq(products.id, productId), gte(products.stockQuantity, quantity))).returning({ stockQuantity: products.stockQuantity });
+      if (!updatedProduct) {
+        throw new Error("STOCK_CHANGED");
+      }
+      reserved.set(productId, quantity);
+    }
 
-  c.executionCtx.waitUntil(
-    sendOrderNotification(created, c.env).catch(console.error)
-  );
+    const [created] = await db
+      .insert(orders)
+      .values({
+        customerName: data.customerName,
+        phone: data.phone,
+        email: data.email || null,
+        address: data.address || null,
+        note: data.note || null,
+        items,
+      })
+      .returning();
 
-  return c.json({ success: true, id: created.id }, 201);
+    c.executionCtx.waitUntil(
+      sendOrderNotification(created, c.env).catch(console.error)
+    );
+
+    return c.json({ success: true, id: created.id }, 201);
+  } catch (error) {
+    await restoreStock(db, reserved);
+    if (error instanceof Error && error.message === "STOCK_CHANGED") {
+      return c.json({ error: "Stock changed while you were placing the order. Please review your cart and try again." }, 409);
+    }
+    console.error(error);
+    return c.json({ error: "Could not place the order. Please try again." }, 500);
+  }
 });
 
 // Admin: list orders
@@ -105,8 +148,19 @@ orderRoutes.patch("/:id/status", requireAuth, requirePermission("orders.manage")
   if (!parsed.success) return c.json({ error: "Invalid status" }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
-  const [updated] = await db.update(orders).set({ status: parsed.data.status }).where(eq(orders.id, id)).returning({ id: orders.id, status: orders.status });
-  if (!updated) return c.json({ error: "Not found" }, 404);
+  const [existing] = await db.select().from(orders).where(eq(orders.id, id));
+  if (!existing) return c.json({ error: "Not found" }, 404);
+  if (existing.status === "cancelled" && parsed.data.status !== "cancelled") {
+    return c.json({ error: "A cancelled order cannot be reopened. Create a new order instead." }, 400);
+  }
+  if (existing.status === "completed" && parsed.data.status !== "completed") {
+    return c.json({ error: "A completed order cannot be changed." }, 400);
+  }
+  const [updated] = await db.update(orders).set({ status: parsed.data.status }).where(and(eq(orders.id, id), eq(orders.status, existing.status))).returning({ id: orders.id, status: orders.status });
+  if (!updated) return c.json({ error: "Order status changed. Refresh and try again." }, 409);
+  if (parsed.data.status === "cancelled" && existing.status !== "cancelled") {
+    await restoreStock(db, orderQuantities(existing.items));
+  }
   await logActivity(c, "status_changed", "order", id, { status: updated.status });
   return c.json({ success: true });
 });
@@ -115,7 +169,13 @@ orderRoutes.patch("/:id/status", requireAuth, requirePermission("orders.manage")
 orderRoutes.delete("/:id", requireAuth, requirePermission("orders.manage"), async (c) => {
   const id = Number(c.req.param("id"));
   const db = getDb(c.env.DATABASE_URL);
-  const [deleted] = await db.delete(orders).where(eq(orders.id, id)).returning({ id: orders.id });
+  const [existing] = await db.select().from(orders).where(eq(orders.id, id));
+  if (!existing) return c.json({ error: "Not found" }, 404);
+  const [deleted] = await db.delete(orders).where(and(eq(orders.id, id), eq(orders.status, existing.status))).returning({ id: orders.id });
+  if (!deleted) return c.json({ error: "Order changed. Refresh and try again." }, 409);
+  if (existing.status !== "cancelled" && existing.status !== "completed") {
+    await restoreStock(db, orderQuantities(existing.items));
+  }
   if (deleted) await logActivity(c, "deleted", "order", id);
   return c.json({ success: true });
 });
