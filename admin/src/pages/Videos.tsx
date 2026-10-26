@@ -13,7 +13,11 @@ import {
 } from "lucide-react";
 import AdminHeader from "@/components/AdminHeader";
 import NavTabs from "@/components/NavTabs";
+import MediaPicker from "@/components/MediaPicker";
+import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { uploadVideo } from "@/lib/upload";
+import { saveMedia } from "@/lib/media";
 import {
   getAllVideos,
   createVideo,
@@ -64,7 +68,7 @@ function toForm(v: VideoItem): FormState {
 }
 
 const inputClass =
-  "w-full rounded-xl border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20";
+  "w-full  border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20";
 
 function Field({
   label,
@@ -89,9 +93,12 @@ export default function Videos() {
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
   const [editing, setEditing] = useState<VideoItem | "new" | null>(null);
+  const [deleting, setDeleting] = useState<VideoItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [viewMode, setViewMode] = useViewMode("videos");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
 
@@ -140,6 +147,8 @@ export default function Videos() {
     setUploading(true);
     try {
       const result = await uploadVideo(file, setProgress);
+      saveMedia({ kind: "video", url: result.videoUrl, posterUrl: result.posterUrl, addedAt: new Date().toISOString() });
+      saveMedia({ kind: "image", url: result.posterUrl, addedAt: new Date().toISOString() });
       setForm((f) => ({ ...f, videoUrl: result.videoUrl, posterUrl: result.posterUrl }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -204,12 +213,11 @@ export default function Videos() {
     });
   }
 
-  function handleDelete(v: VideoItem) {
-    if (!confirm(`Delete "${v.title}"?`)) return;
-    run(async () => {
-      await deleteVideo(v.id);
-      setItems((prev) => prev.filter((x) => x.id !== v.id));
-    });
+  async function handleDelete() {
+    if (!deleting) return;
+    await deleteVideo(deleting.id);
+    setItems((prev) => prev.filter((item) => item.id !== deleting.id));
+    setDeleting(null);
   }
 
   return (
@@ -217,20 +225,24 @@ export default function Videos() {
       <AdminHeader />
       <NavTabs />
 
+      <div className="md:ml-56">
       <main className="mx-auto max-w-5xl px-5 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-forest">Videos ({items.length})</h2>
-          <button
-            onClick={openNew}
-            className="flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf"
-          >
-            <Plus className="h-4 w-4" />
-            Add video
-          </button>
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-leaf">Media library</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-forest">Videos <span className="ml-1 align-middle  bg-sage/25 px-2.5 py-1 text-xs font-medium text-forest/70">{items.length}</span></h1>
+            <p className="mt-1.5 text-sm text-forest/55">Manage videos featured on the garden website.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ViewModeControl mode={viewMode} onChange={setViewMode} />
+            <button onClick={openNew} className="flex items-center gap-2 bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf">
+              <Plus className="h-4 w-4" />Add video
+            </button>
+          </div>
         </div>
 
         {pageError && (
-          <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="mb-4  bg-red-50 px-4 py-3 text-sm text-red-700">
             {pageError}
           </p>
         )}
@@ -240,27 +252,27 @@ export default function Videos() {
         ) : items.length === 0 ? (
           <p className="text-forest/60">No videos yet. Add your first one.</p>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={viewMode === "cards" ? "grid gap-5 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
             {items.map((v, index) => (
               <div
                 key={v.id}
-                className={`overflow-hidden rounded-2xl border border-forest/10 bg-white/60 ${
+                className={`${viewMode === "list" ? "flex items-stretch" : "overflow-hidden"} border border-forest/10 bg-white shadow-sm ${
                   v.isPublished ? "" : "opacity-70"
                 }`}
               >
                 {v.posterUrl ? (
-                  <img src={v.posterUrl} alt={v.title} className="h-48 w-full object-cover" />
+                  <img src={v.posterUrl} alt={v.title} className={viewMode === "list" ? "h-32 w-36 shrink-0 object-cover" : "h-48 w-full object-cover"} />
                 ) : (
-                  <div className="flex h-48 w-full items-center justify-center bg-sage/20">
+                  <div className={`flex items-center justify-center bg-sage/20 ${viewMode === "list" ? "h-32 w-36 shrink-0" : "h-48 w-full"}`}>
                     <ImageOff className="h-8 w-8 text-forest/30" />
                   </div>
                 )}
 
-                <div className="p-4">
+                <div className={`flex-1 p-4 ${viewMode === "list" ? "sm:flex sm:flex-col sm:justify-center" : ""}`}>
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-forest">{v.title}</h3>
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs ${
+                      className={`shrink-0  px-2.5 py-0.5 text-xs ${
                         v.isPublished ? "bg-sage/40 text-forest" : "bg-forest/10 text-forest/70"
                       }`}
                     >
@@ -274,7 +286,7 @@ export default function Videos() {
                       onClick={() => move(index, -1)}
                       disabled={index === 0}
                       aria-label="Move up"
-                      className="rounded-full border border-forest/15 p-1.5 text-forest transition hover:bg-white disabled:opacity-30"
+                      className=" border border-forest/15 p-1.5 text-forest transition hover:bg-white disabled:opacity-30"
                     >
                       <ArrowUp className="h-3.5 w-3.5" />
                     </button>
@@ -282,13 +294,13 @@ export default function Videos() {
                       onClick={() => move(index, 1)}
                       disabled={index === items.length - 1}
                       aria-label="Move down"
-                      className="rounded-full border border-forest/15 p-1.5 text-forest transition hover:bg-white disabled:opacity-30"
+                      className=" border border-forest/15 p-1.5 text-forest transition hover:bg-white disabled:opacity-30"
                     >
                       <ArrowDown className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => togglePublished(v)}
-                      className="flex items-center gap-1.5 rounded-full border border-forest/15 px-3 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
+                      className="flex items-center gap-1.5  border border-forest/15 px-3 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
                     >
                       {v.isPublished ? (
                         <EyeOff className="h-3.5 w-3.5" />
@@ -299,14 +311,14 @@ export default function Videos() {
                     </button>
                     <button
                       onClick={() => openEdit(v)}
-                      className="flex items-center gap-1.5 rounded-full border border-forest/15 px-3 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
+                      className="flex items-center gap-1.5  border border-forest/15 px-3 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(v)}
-                      className="flex items-center gap-1.5 rounded-full border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                      onClick={() => setDeleting(v)}
+                      className="flex items-center gap-1.5  border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete
@@ -318,12 +330,13 @@ export default function Videos() {
           </div>
         )}
       </main>
+      </div>
 
       {editing && (
         <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-lg rounded-3xl bg-cream p-6 shadow-xl"
+            className="w-full max-w-lg  bg-cream p-6 shadow-xl"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-forest">
@@ -386,16 +399,16 @@ export default function Videos() {
                     <img
                       src={form.posterUrl}
                       alt=""
-                      className="h-28 w-16 rounded-xl border border-forest/15 object-cover"
+                      className="h-28 w-16  border border-forest/15 object-cover"
                     />
                   )}
-                  <label className="flex h-20 w-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-forest/30 px-1 text-center text-xs text-forest/60 transition hover:border-leaf hover:text-leaf">
+                  <label className="flex h-20 w-28 cursor-pointer flex-col items-center justify-center  border border-dashed border-forest/30 px-1 text-center text-xs text-forest/60 transition hover:border-leaf hover:text-leaf">
                     {uploading ? (
                       `${progress}%`
                     ) : (
                       <>
                         <Upload className="mb-1 h-5 w-5" />
-                        {form.videoUrl ? "Replace" : "Choose video"}
+                        {form.videoUrl ? "Replace from computer" : "From computer"}
                       </>
                     )}
                     <input
@@ -406,6 +419,7 @@ export default function Videos() {
                       disabled={uploading}
                     />
                   </label>
+                  <button type="button" onClick={() => setShowMediaPicker(true)} className="flex h-20 w-28 flex-col items-center justify-center gap-1 border border-forest/20 px-2 text-xs text-forest/65 transition hover:border-leaf hover:text-leaf">Choose from library</button>
                 </div>
                 {form.videoUrl && !uploading && (
                   <p className="mt-2 text-xs text-leaf">Video uploaded</p>
@@ -428,14 +442,14 @@ export default function Videos() {
               <button
                 type="button"
                 onClick={() => setEditing(null)}
-                className="rounded-full border border-forest/15 px-5 py-2.5 text-sm font-medium text-forest transition hover:bg-white"
+                className=" border border-forest/15 px-5 py-2.5 text-sm font-medium text-forest transition hover:bg-white"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving || uploading}
-                className="rounded-full bg-forest px-6 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
+                className=" bg-forest px-6 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
               >
                 {saving ? "Saving..." : "Save"}
               </button>
@@ -443,6 +457,8 @@ export default function Videos() {
           </form>
         </div>
       )}
+      {showMediaPicker && <MediaPicker kind="video" onClose={() => setShowMediaPicker(false)} onSelect={(asset) => { setForm((current) => ({ ...current, videoUrl: asset.url, posterUrl: asset.posterUrl ?? "" })); setShowMediaPicker(false); }} />}
+      {deleting && <ConfirmDialog title="Delete video?" description={`“${deleting.title}” will be removed from your video page and admin list.`} onClose={() => setDeleting(null)} onConfirm={handleDelete} />}
     </div>
   );
 }

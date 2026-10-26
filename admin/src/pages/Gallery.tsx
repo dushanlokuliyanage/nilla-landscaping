@@ -14,7 +14,11 @@ import {
 } from "lucide-react";
 import AdminHeader from "@/components/AdminHeader";
 import NavTabs from "@/components/NavTabs";
+import MediaPicker from "@/components/MediaPicker";
+import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { uploadImage } from "@/lib/upload";
+import { saveMedia } from "@/lib/media";
 import {
   getAllGalleryProjects,
   createGalleryProject,
@@ -68,7 +72,7 @@ function toForm(p: GalleryProject): FormState {
 }
 
 const inputClass =
-  "w-full rounded-none border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20";
+  "w-full  border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20";
 
 function Field({
   label,
@@ -93,9 +97,12 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
   const [editing, setEditing] = useState<GalleryProject | "new" | null>(null);
+  const [deleting, setDeleting] = useState<GalleryProject | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [viewMode, setViewMode] = useViewMode("gallery");
   const [error, setError] = useState("");
 
   async function load() {
@@ -143,7 +150,9 @@ export default function Gallery() {
     try {
       const urls: string[] = [];
       for (const file of files) {
-        urls.push(await uploadImage(file));
+        const url = await uploadImage(file);
+        saveMedia({ kind: "image", url, addedAt: new Date().toISOString() });
+        urls.push(url);
       }
       setForm((f) => ({ ...f, images: [...f.images, ...urls] }));
     } catch (err) {
@@ -226,12 +235,11 @@ export default function Gallery() {
     });
   }
 
-  function handleDelete(p: GalleryProject) {
-    if (!confirm(`Delete "${p.title}"?`)) return;
-    run(async () => {
-      await deleteGalleryProject(p.id);
-      setProjects((prev) => prev.filter((x) => x.id !== p.id));
-    });
+  async function handleDelete() {
+    if (!deleting) return;
+    await deleteGalleryProject(deleting.id);
+    setProjects((prev) => prev.filter((project) => project.id !== deleting.id));
+    setDeleting(null);
   }
 
   return (
@@ -239,22 +247,24 @@ export default function Gallery() {
       <AdminHeader />
       <NavTabs />
 
+      <div className="md:ml-56">
       <main className="mx-auto max-w-5xl px-5 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-forest">
-            Gallery projects ({projects.length})
-          </h2>
-          <button
-            onClick={openNew}
-            className="flex items-center gap-2 rounded-none bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf"
-          >
-            <Plus className="h-4 w-4" />
-            Add Photos
-          </button>
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-leaf">Portfolio</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-forest">Gallery <span className="ml-1 align-middle  bg-sage/25 px-2.5 py-1 text-xs font-medium text-forest/70">{projects.length}</span></h1>
+            <p className="mt-1.5 text-sm text-forest/55">Showcase completed landscaping projects.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ViewModeControl mode={viewMode} onChange={setViewMode} />
+            <button onClick={openNew} className="flex items-center gap-2 bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf">
+              <Plus className="h-4 w-4" />Add Photos
+            </button>
+          </div>
         </div>
 
         {pageError && (
-          <p className="mb-4 rounded-none bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="mb-4  bg-red-50 px-4 py-3 text-sm text-red-700">
             {pageError}
           </p>
         )}
@@ -264,27 +274,27 @@ export default function Gallery() {
         ) : projects.length === 0 ? (
           <p className="text-forest/60">No projects yet. Add your first one.</p>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={viewMode === "cards" ? "grid gap-5 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
             {projects.map((p, index) => (
               <div
                 key={p.id}
-                className={`overflow-hidden rounded-none border border-forest/10 bg-white/60 ${
+                className={`${viewMode === "list" ? "flex items-stretch" : "overflow-hidden"} border border-forest/10 bg-white shadow-sm ${
                   p.isPublished ? "" : "opacity-70"
                 }`}
               >
                 {p.images[0] ? (
-                  <img src={p.images[0]} alt={p.title} className="h-40 w-full object-cover" />
+                  <img src={p.images[0]} alt={p.title} className={viewMode === "list" ? "h-32 w-36 shrink-0 object-cover" : "h-40 w-full object-cover"} />
                 ) : (
-                  <div className="flex h-40 w-full items-center justify-center bg-sage/20">
+                  <div className={`flex items-center justify-center bg-sage/20 ${viewMode === "list" ? "h-32 w-36 shrink-0" : "h-40 w-full"}`}>
                     <ImageOff className="h-8 w-8 text-forest/30" />
                   </div>
                 )}
 
-                <div className="p-4">
+                <div className={`flex-1 p-4 ${viewMode === "list" ? "sm:flex sm:flex-col sm:justify-center" : ""}`}>
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-forest">{p.title}</h3>
                     <span
-                      className={`shrink-0 rounded-none px-2.5 py-0.5 text-xs ${
+                      className={`shrink-0  px-2.5 py-0.5 text-xs ${
                         p.isPublished ? "bg-sage/40 text-forest" : "bg-forest/10 text-forest/70"
                       }`}
                     >
@@ -305,7 +315,7 @@ export default function Gallery() {
                       onClick={() => move(index, -1)}
                       disabled={index === 0}
                       aria-label="Move up"
-                      className="rounded-none border border-forest/15 p-1.5 text-forest transition hover:bg-white disabled:opacity-30"
+                      className=" border border-forest/15 p-1.5 text-forest transition hover:bg-white disabled:opacity-30"
                     >
                       <ArrowUp className="h-3.5 w-3.5" />
                     </button>
@@ -313,13 +323,13 @@ export default function Gallery() {
                       onClick={() => move(index, 1)}
                       disabled={index === projects.length - 1}
                       aria-label="Move down"
-                      className="rounded-none border border-forest/15 p-1.5 text-forest transition hover:bg-white disabled:opacity-30"
+                      className=" border border-forest/15 p-1.5 text-forest transition hover:bg-white disabled:opacity-30"
                     >
                       <ArrowDown className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => togglePublished(p)}
-                      className="flex items-center gap-1.5 rounded-none border border-forest/15 px-3 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
+                      className="flex items-center gap-1.5  border border-forest/15 px-3 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
                     >
                       {p.isPublished ? (
                         <EyeOff className="h-3.5 w-3.5" />
@@ -330,14 +340,14 @@ export default function Gallery() {
                     </button>
                     <button
                       onClick={() => openEdit(p)}
-                      className="flex items-center gap-1.5 rounded-none border border-forest/15 px-3 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
+                      className="flex items-center gap-1.5  border border-forest/15 px-3 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(p)}
-                      className="flex items-center gap-1.5 rounded-none border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                      onClick={() => setDeleting(p)}
+                      className="flex items-center gap-1.5  border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete
@@ -349,12 +359,13 @@ export default function Gallery() {
           </div>
         )}
       </main>
+      </div>
 
       {editing && (
         <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-lg rounded-none bg-cream p-6 shadow-xl"
+            className="w-full max-w-lg  bg-cream p-6 shadow-xl"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-forest">
@@ -423,13 +434,13 @@ export default function Gallery() {
                   {form.images.map((src, i) => (
                     <div
                       key={src + i}
-                      className="relative h-20 w-20 overflow-hidden rounded-none border border-forest/15"
+                      className="relative h-20 w-20 overflow-hidden  border border-forest/15"
                     >
                       <img src={src} alt="" className="h-full w-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removeImage(i)}
-                        className="absolute right-1 top-1 rounded-none bg-black/60 p-0.5 text-white"
+                        className="absolute right-1 top-1  bg-black/60 p-0.5 text-white"
                         aria-label="Remove photo"
                       >
                         <X className="h-3 w-3" />
@@ -442,7 +453,7 @@ export default function Gallery() {
                         <button
                           type="button"
                           onClick={() => makeCover(i)}
-                          className="absolute bottom-1 left-1 rounded-none bg-black/60 p-0.5 text-white"
+                          className="absolute bottom-1 left-1  bg-black/60 p-0.5 text-white"
                           aria-label="Make cover photo"
                         >
                           <Star className="h-3 w-3" />
@@ -451,13 +462,13 @@ export default function Gallery() {
                     </div>
                   ))}
 
-                  <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-none border border-dashed border-forest/30 text-xs text-forest/60 transition hover:border-leaf hover:text-leaf">
+                  <label className="flex h-20 w-28 cursor-pointer flex-col items-center justify-center  border border-dashed border-forest/30 text-xs text-forest/60 transition hover:border-leaf hover:text-leaf">
                     {uploading ? (
                       "..."
                     ) : (
                       <>
                         <Upload className="mb-1 h-5 w-5" />
-                        Add
+                        From computer
                       </>
                     )}
                     <input
@@ -469,6 +480,7 @@ export default function Gallery() {
                       disabled={uploading}
                     />
                   </label>
+                  <button type="button" onClick={() => setShowMediaPicker(true)} className="flex h-20 w-28 flex-col items-center justify-center gap-1 border border-forest/20 text-xs text-forest/65 transition hover:border-leaf hover:text-leaf">Choose from library</button>
                 </div>
               </Field>
 
@@ -488,14 +500,14 @@ export default function Gallery() {
               <button
                 type="button"
                 onClick={() => setEditing(null)}
-                className="rounded-none border border-forest/15 px-5 py-2.5 text-sm font-medium text-forest transition hover:bg-white"
+                className=" border border-forest/15 px-5 py-2.5 text-sm font-medium text-forest transition hover:bg-white"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving || uploading}
-                className="rounded-none bg-forest px-6 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
+                className=" bg-forest px-6 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50"
               >
                 {saving ? "Saving..." : "Save"}
               </button>
@@ -503,6 +515,8 @@ export default function Gallery() {
           </form>
         </div>
       )}
+      {showMediaPicker && <MediaPicker kind="image" onClose={() => setShowMediaPicker(false)} onSelect={(asset) => { setForm((current) => ({ ...current, images: [...current.images, asset.url] })); setShowMediaPicker(false); }} />}
+      {deleting && <ConfirmDialog title="Delete gallery project?" description={`“${deleting.title}” will be removed from your public gallery and admin list.`} onClose={() => setDeleting(null)} onConfirm={handleDelete} />}
     </div>
   );
 }

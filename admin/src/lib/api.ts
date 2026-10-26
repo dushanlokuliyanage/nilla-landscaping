@@ -59,7 +59,8 @@ export type Order = {
   createdAt: string;
 };
 
-export type AdminAccount = { id: number; email: string; role: "owner" | "manager" | "staff"; isActive: boolean; createdAt: string };
+export type AdminAccount = { id: number; email: string; role: string; isActive: boolean; createdAt: string };
+export type AdminRole = { key: string; name: string; description: string; isActive: boolean; isSystem: boolean; permissions: string[]; createdAt: string; updatedAt: string };
 export type ActivityLog = { id: number; adminId: number | null; adminEmail: string; action: string; entity: string; entityId: string | null; details: Record<string, unknown>; createdAt: string };
 export type AccessLog = { id: number; adminId: number | null; email: string; event: string; ipAddress: string | null; userAgent: string | null; createdAt: string };
 
@@ -114,16 +115,26 @@ export async function logoutWithLog() {
   try { await request("/api/auth/logout", { method: "POST" }); } finally { logout(); }
 }
 
-export function getCurrentAdmin(): Promise<{ id: number; email: string; role: AdminAccount["role"] }> {
+export function getCurrentAdmin(): Promise<{ id: number; email: string; role: string; permissions: string[] }> {
   return request("/api/auth/me");
 }
 
 export function getTeam(): Promise<AdminAccount[]> { return request("/api/admin/team"); }
-export function createTeamMember(data: { email: string; password: string; role: "manager" | "staff" }): Promise<AdminAccount> {
+export function createTeamMember(data: { email: string; password: string; role: string }): Promise<AdminAccount> {
   return request("/api/admin/team", { method: "POST", body: JSON.stringify(data) });
 }
-export function updateTeamRole(id: number, role: "manager" | "staff") {
+export function updateTeamRole(id: number, role: string) {
   return request(`/api/admin/team/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
+}
+export function getRoles(): Promise<AdminRole[]> { return request("/api/admin/roles"); }
+export function createRole(data: Pick<AdminRole, "key" | "name" | "description" | "isActive" | "permissions">): Promise<AdminRole> {
+  return request("/api/admin/roles", { method: "POST", body: JSON.stringify(data) });
+}
+export function updateRole(key: string, data: Pick<AdminRole, "name" | "description" | "isActive" | "permissions">): Promise<AdminRole> {
+  return request(`/api/admin/roles/${encodeURIComponent(key)}`, { method: "PUT", body: JSON.stringify(data) });
+}
+export function deleteRole(key: string) {
+  return request(`/api/admin/roles/${encodeURIComponent(key)}`, { method: "DELETE" });
 }
 export function updateTeamStatus(id: number, isActive: boolean) {
   return request(`/api/admin/team/${id}/status`, { method: "PATCH", body: JSON.stringify({ isActive }) });

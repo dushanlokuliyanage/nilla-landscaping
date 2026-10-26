@@ -37,7 +37,7 @@ export default function Login() {
 
         <form
           onSubmit={handleSubmit}
-          className=" border border-forest/10 bg-white/70 p-7"
+          className="  border border-forest/10 bg-white shadow-sm p-7"
         >
           <div className="mb-4">
             <label className="mb-1.5 block text-sm font-medium text-forest">Email</label>
@@ -46,7 +46,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-forest/15 bg-white px-4 py-2.5 text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20"
+              className="w-full  border border-forest/15 bg-white px-4 py-2.5 text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20"
             />
           </div>
 
@@ -54,7 +54,7 @@ export default function Login() {
             <label className="mb-1.5 block text-sm font-medium text-forest">Password</label>
             <input type="password" required value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-forest/15 bg-white px-4 py-2.5 text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20"
+              className="w-full  border border-forest/15 bg-white px-4 py-2.5 text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20"
             />
           </div>
 

@@ -8,8 +8,58 @@
   --color-earth: #c98b4b;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
-  background: var(--color-cream);
+  min-width: 360px;
+  min-height: 100vh;
+  background: #f4f5ef;
   color: #1d2b20;
-  font-family: system-ui, sans-serif;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  border-radius: 0;
+  background-color: white;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgb(47 107 58 / 24%);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #cfe0cb;
+  color: #14401f;
+}
+
+@media (max-width: 767px) {
+  body {
+    min-width: 320px;
+  }
 }

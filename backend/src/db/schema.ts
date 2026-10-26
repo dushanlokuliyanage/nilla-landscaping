@@ -30,6 +30,17 @@ export const admins = pgTable("admins", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const adminRoles = pgTable("admin_roles", {
+  key: text("key").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  isActive: boolean("is_active").notNull().default(true),
+  isSystem: boolean("is_system").notNull().default(false),
+  permissions: jsonb("permissions").$type<string[]>().notNull().default([]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const activityLogs = pgTable("activity_logs", {
   id: serial("id").primaryKey(),
   adminId: integer("admin_id"),

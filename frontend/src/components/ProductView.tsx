@@ -44,7 +44,7 @@ export default function ProductView() {
       .catch(() => setLoadState("notfound"));
   }, [slug]);
 
-  function putInCart() {
+  function putInCart(showDrawer = true) {
     if (!product) return;
     addItem({
       productId: product.id,
@@ -55,7 +55,7 @@ export default function ProductView() {
       unit: product.unit,
       quantity,
       options: selected,
-    });
+    }, showDrawer);
   }
 
   function handleAddToCart() {
@@ -64,7 +64,7 @@ export default function ProductView() {
   }
 
   function handleOrderNow() {
-    putInCart();
+    putInCart(false);
     router.push("/cart");
   }
 

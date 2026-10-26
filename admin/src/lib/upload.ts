@@ -5,7 +5,13 @@ const VIDEO_PRESET = import.meta.env.VITE_CLOUDINARY_VIDEO_PRESET;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
 
-export async function uploadImage(file: File): Promise<string> {
+export type ImageUploadOptions = {
+  folder?: string;
+  scale?: number | "original";
+  autoSide?: "width" | "height" | "longest";
+};
+
+export async function uploadImage(file: File, options: ImageUploadOptions = {}): Promise<string> {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error("Image upload is not set up yet (Cloudinary settings missing)");
   }
@@ -19,6 +25,7 @@ export async function uploadImage(file: File): Promise<string> {
   const body = new FormData();
   body.append("file", file);
   body.append("upload_preset", UPLOAD_PRESET);
+  if (options.folder) body.append("folder", options.folder);
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
@@ -30,10 +37,14 @@ export async function uploadImage(file: File): Promise<string> {
     throw new Error(data?.error?.message ?? "Upload failed");
   }
 
-  return (data.secure_url as string).replace(
-    "/upload/",
-    "/upload/f_auto,q_auto,w_1200/"
-  );
+  const original = data.secure_url as string;
+  if (file.type === "image/gif" || options.scale === "original") return original;
+  const width = options.scale ?? 1200;
+  const autoSide = options.autoSide ?? "width";
+  const resize = autoSide === "width" ? `w_${width}`
+    : autoSide === "height" ? `h_${width}`
+      : `w_${width},h_${width}`;
+  return original.replace("/upload/", `/upload/f_auto,q_auto,${resize},c_limit/`);
 }
 
 type CloudinaryResult = {
@@ -43,7 +54,8 @@ type CloudinaryResult = {
 
 export function uploadVideo(
   file: File,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  folder?: string
 ): Promise<{ videoUrl: string; posterUrl: string }> {
   return new Promise((resolve, reject) => {
     if (!CLOUD_NAME || !VIDEO_PRESET) {
@@ -62,6 +74,7 @@ export function uploadVideo(
     const body = new FormData();
     body.append("file", file);
     body.append("upload_preset", VIDEO_PRESET);
+    if (folder) body.append("folder", folder);
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`);

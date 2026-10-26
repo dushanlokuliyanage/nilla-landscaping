@@ -1,20 +1,23 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Leaf, Sprout } from "lucide-react";
+import { ArrowRight, Leaf } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
+    <section className="relative overflow-hidden pt-28 pb-20 md:pt-28 md:pb-28">
       <div className="absolute -top-24 -right-24 h-[28rem] w-[28rem] rounded-full bg-sage/40 blur-3xl" />
       <div className="absolute bottom-0 -left-24 h-[22rem] w-[22rem] rounded-full bg-earth/20 blur-3xl" />
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-5 md:grid-cols-2">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-forest/15 bg-white/60 px-4 py-1.5 text-sm text-forest">
-            <Sprout className="h-4 w-4 text-leaf" />
-            Landscaping and garden service
-          </span>
-
+      <div className="relative mx-auto grid max-w-6xl items-start gap-10 px-5 md:grid-cols-2 md:gap-14">
+        <div className="pt-2 md:pt-0">
+          <div className="mb-7 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-forest/55">
+            <span className="text-leaf">Plan</span>
+            <span aria-hidden="true" className="h-1 w-1 bg-earth" />
+            <span className="text-leaf">Plant</span>
+            <span aria-hidden="true" className="h-1 w-1 bg-earth" />
+            <span className="text-leaf">Care</span>
+            <span className="ml-1 hidden h-px flex-1 bg-forest/10 sm:block" />
+          </div>
           <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-forest md:text-6xl lg:text-7xl">
             Outdoor spaces that feel <span className="text-leaf">alive</span>.
           </h1>

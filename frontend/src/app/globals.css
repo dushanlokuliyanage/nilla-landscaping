@@ -24,3 +24,28 @@ body {
 ::selection {
   background: var(--color-sage);
 }
+
+@keyframes cart-drawer-enter {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes cart-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cart-drawer-panel {
+  animation: cart-drawer-enter 220ms ease-out both;
+}
+
+.cart-drawer-backdrop {
+  animation: cart-backdrop-enter 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-drawer-panel,
+  .cart-drawer-backdrop {
+    animation-duration: 1ms;
+  }
+}

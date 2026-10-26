@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type CartItem = {
   key: string; // product + chosen options, so the same product in two sizes is two lines
@@ -21,7 +21,10 @@ type CartContextValue = {
   count: number;
   total: number;
   ready: boolean;
-  addItem: (item: AddInput) => void;
+  isDrawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
+  addItem: (item: AddInput, showDrawer?: boolean) => void;
   setQuantity: (key: string, quantity: number) => void;
   removeItem: (key: string) => void;
   clear: () => void;
@@ -46,6 +49,9 @@ function clampQuantity(q: number) {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   // Load the saved cart once, in the browser
   useEffect(() => {
@@ -84,10 +90,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<CartContextValue>(() => {
     return {
       items,
-      count: items.length,
+      count: items.reduce((sum, item) => sum + item.quantity, 0),
       total: items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0),
       ready,
-      addItem: (item) => {
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
+      addItem: (item, showDrawer = true) => {
         const key = makeKey(item.productId, item.options);
         setItems((prev) => {
           const existing = prev.find((i) => i.key === key);
@@ -100,6 +109,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }
           return [...prev, { ...item, key, quantity: clampQuantity(item.quantity) }];
         });
+        if (showDrawer) setDrawerOpen(true);
       },
       setQuantity: (key, quantity) =>
         setItems((prev) =>
@@ -108,7 +118,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeItem: (key) => setItems((prev) => prev.filter((i) => i.key !== key)),
       clear: () => setItems([]),
     };
-  }, [items, ready]);
+  }, [items, ready, isDrawerOpen, openDrawer, closeDrawer]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

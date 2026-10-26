@@ -2,16 +2,10 @@ import { Context, Next } from "hono";
 import { verifyToken } from "../lib/auth.js";
 import type { Env } from "../types.js";
 import { getDb } from "../db/index.js";
-import { admins } from "../db/schema.js";
+import { admins, adminRoles } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import type { AdminIdentity } from "../types.js";
 import { logAccess } from "../lib/logging.js";
-
-export const rolePermissions = {
-  owner: ["inquiries.read", "inquiries.manage", "products.manage", "orders.read", "orders.manage", "team.manage", "logs.read"],
-  manager: ["inquiries.read", "inquiries.manage", "products.manage", "orders.read", "orders.manage", "logs.read"],
-  staff: ["inquiries.read", "inquiries.manage", "orders.read", "orders.manage"],
-} as const;
 
 export async function requireAuth(c: Context<{ Bindings: Env }>, next: Next) {
   const header = c.req.header("Authorization");
@@ -32,15 +26,27 @@ export async function requireAuth(c: Context<{ Bindings: Env }>, next: Next) {
     await logAccess(c, payload.email, "inactive_account", payload.id);
     return c.json({ error: "Account unavailable" }, 401);
   }
-  c.set("admin", { id: admin.id, email: admin.email, role: admin.role } satisfies AdminIdentity);
+  const [role] = await getDb(c.env.DATABASE_URL).select({ permissions: adminRoles.permissions, isActive: adminRoles.isActive }).from(adminRoles).where(eq(adminRoles.key, admin.role));
+  c.set("admin", { id: admin.id, email: admin.email, role: admin.role, permissions: admin.role === "owner" ? ["*"] : role?.isActive ? role.permissions : [] } satisfies AdminIdentity);
   await next();
 }
 
 export function requirePermission(permission: string) {
   return async (c: Context<{ Bindings: Env }>, next: Next) => {
     const admin = c.get("admin") as AdminIdentity | undefined;
-    const permissions = rolePermissions[admin?.role as keyof typeof rolePermissions] ?? [];
-    if (!permissions.includes(permission as never)) {
+    const permissions = admin?.permissions ?? [];
+    if (!permissions.includes("*") && !permissions.includes(permission)) {
+      if (admin) await logAccess(c, admin.email, "access_denied", admin.id);
+      return c.json({ error: "Forbidden" }, 403);
+    }
+    await next();
+  };
+}
+
+export function requireAnyPermission(...permissions: string[]) {
+  return async (c: Context<{ Bindings: Env }>, next: Next) => {
+    const admin = c.get("admin") as AdminIdentity | undefined;
+    if (!admin?.permissions.includes("*") && !permissions.some((permission) => admin?.permissions.includes(permission))) {
       if (admin) await logAccess(c, admin.email, "access_denied", admin.id);
       return c.json({ error: "Forbidden" }, 403);
     }

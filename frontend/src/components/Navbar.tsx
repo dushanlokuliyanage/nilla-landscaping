@@ -17,7 +17,7 @@ const links = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const { count } = useCart();
+  const { count, openDrawer } = useCart();
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-forest/10 bg-cream/80 backdrop-blur-md">
@@ -37,8 +37,9 @@ export default function Navbar() {
         </ul>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="/cart"
+          <button
+            type="button"
+            onClick={openDrawer}
             aria-label={count > 0 ? `Cart, ${count} items` : "Cart"}
             className="relative flex h-10 w-10 items-center justify-center text-forest transition hover:bg-white"
           >
@@ -48,7 +49,7 @@ export default function Navbar() {
                 {count}
               </span>
             )}
-          </Link>
+          </button>
 
           <Link
             href="/#contact"
