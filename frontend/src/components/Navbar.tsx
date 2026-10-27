@@ -52,7 +52,7 @@ export default function Navbar() {
           </button>
 
           <Link
-            href="/#contact"
+            href="/quote"
             className="hidden bg-forest px-5 py-2 text-sm font-medium text-cream transition hover:bg-leaf md:inline-flex"
           >
             Get a Quote
@@ -83,7 +83,7 @@ export default function Navbar() {
             </Link>
           ))}
           <Link
-            href="/#contact"
+            href="/quote"
             onClick={() => setOpen(false)}
             className="block bg-forest px-5 py-2.5 text-center font-medium text-cream transition hover:bg-leaf"
           >

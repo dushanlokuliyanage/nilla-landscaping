@@ -74,7 +74,7 @@ export default function Dashboard() {
     <div className="min-h-screen">
       <AdminHeader unreadCount={unreadCount} />
       <NavTabs />
-      <div className="md:ml-56">
+      <div className="ml-16 md:ml-56">
       <main className="mx-auto max-w-6xl px-5 py-8">
         {loading ? <p className="text-forest/60">Loading overview...</p> : null}
         <section aria-label="Business report" className="mb-10 space-y-5">

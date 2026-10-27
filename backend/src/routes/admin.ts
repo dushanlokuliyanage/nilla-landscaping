@@ -6,14 +6,15 @@ import { accessLogs, activityLogs, admins, adminRoles } from "../db/schema.js";
 import { requireAuth, requirePermission, requireAnyPermission } from "../middleware/auth.js";
 import { logActivity } from "../lib/logging.js";
 import { hashPassword } from "../lib/auth.js";
+import { parsePositiveId, readJson } from "../lib/validation.js";
 import type { Env } from "../types.js";
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 adminRoutes.use("*", requireAuth);
 
 const accountSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.email().trim().max(254),
+  password: z.string().min(8).max(128),
   role: z.string().regex(/^[a-z][a-z0-9_-]{1,39}$/),
 });
 
@@ -31,7 +32,7 @@ adminRoutes.get("/roles", requireAnyPermission("roles.manage", "team.manage"), a
 });
 
 adminRoutes.post("/roles", requirePermission("roles.manage"), async (c) => {
-  const parsed = roleSchema.safeParse(await c.req.json());
+  const parsed = roleSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: "Invalid role details" }, 400);
   if (parsed.data.key === "owner") return c.json({ error: "The owner role is reserved" }, 400);
   const db = getDb(c.env.DATABASE_URL);
@@ -43,7 +44,7 @@ adminRoutes.post("/roles", requirePermission("roles.manage"), async (c) => {
 });
 
 adminRoutes.put("/roles/:key", requirePermission("roles.manage"), async (c) => {
-  const parsed = roleSchema.omit({ key: true }).safeParse(await c.req.json());
+  const parsed = roleSchema.omit({ key: true }).safeParse(await readJson(c.req.raw));
   const key = c.req.param("key");
   if (!parsed.success) return c.json({ error: "Invalid role details" }, 400);
   if (key === "owner") return c.json({ error: "The owner role is protected" }, 400);
@@ -73,7 +74,7 @@ adminRoutes.get("/team", requirePermission("team.manage"), async (c) => {
 });
 
 adminRoutes.post("/team", requirePermission("team.manage"), async (c) => {
-  const parsed = accountSchema.safeParse(await c.req.json());
+  const parsed = accountSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: "Invalid account details" }, 400);
   const db = getDb(c.env.DATABASE_URL);
   const email = parsed.data.email.toLowerCase();
@@ -87,9 +88,9 @@ adminRoutes.post("/team", requirePermission("team.manage"), async (c) => {
 });
 
 adminRoutes.patch("/team/:id/role", requirePermission("team.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  const parsed = z.object({ role: z.string().regex(/^[a-z][a-z0-9_-]{1,39}$/) }).safeParse(await c.req.json());
-  if (!Number.isInteger(id) || id < 1 || !parsed.success) return c.json({ error: "Invalid request" }, 400);
+  const id = parsePositiveId(c.req.param("id"));
+  const parsed = z.object({ role: z.string().regex(/^[a-z][a-z0-9_-]{1,39}$/) }).safeParse(await readJson(c.req.raw));
+  if (id === null || !parsed.success) return c.json({ error: "Invalid request" }, 400);
   const [target] = await getDb(c.env.DATABASE_URL).select({ id: admins.id, email: admins.email, role: admins.role }).from(admins).where(eq(admins.id, id));
   if (!target) return c.json({ error: "Admin not found" }, 404);
   if (target.role === "owner") return c.json({ error: "Owner role cannot be changed here" }, 400);
@@ -101,9 +102,9 @@ adminRoutes.patch("/team/:id/role", requirePermission("team.manage"), async (c) 
 });
 
 adminRoutes.patch("/team/:id/status", requirePermission("team.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  const parsed = z.object({ isActive: z.boolean() }).safeParse(await c.req.json());
-  if (!Number.isInteger(id) || id < 1 || !parsed.success) return c.json({ error: "Invalid request" }, 400);
+  const id = parsePositiveId(c.req.param("id"));
+  const parsed = z.object({ isActive: z.boolean() }).safeParse(await readJson(c.req.raw));
+  if (id === null || !parsed.success) return c.json({ error: "Invalid request" }, 400);
   const [target] = await getDb(c.env.DATABASE_URL).select({ id: admins.id, email: admins.email, role: admins.role, isActive: admins.isActive }).from(admins).where(eq(admins.id, id));
   if (!target) return c.json({ error: "Admin not found" }, 404);
   if (target.role === "owner" || id === (c.get("admin") as { id: number }).id) return c.json({ error: "This account cannot be changed here" }, 400);

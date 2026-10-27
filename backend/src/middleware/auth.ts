@@ -35,7 +35,9 @@ export function requirePermission(permission: string) {
   return async (c: Context<{ Bindings: Env }>, next: Next) => {
     const admin = c.get("admin") as AdminIdentity | undefined;
     const permissions = admin?.permissions ?? [];
-    if (!permissions.includes("*") && !permissions.includes(permission)) {
+    const [resource, action] = permission.split(".");
+    const legacy = action === "read" ? `${resource}.read` : `${resource}.manage`;
+    if (!permissions.includes("*") && !permissions.includes(permission) && !permissions.includes(legacy)) {
       if (admin) await logAccess(c, admin.email, "access_denied", admin.id);
       return c.json({ error: "Forbidden" }, 403);
     }

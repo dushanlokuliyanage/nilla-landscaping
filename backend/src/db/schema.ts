@@ -21,6 +21,37 @@ export const inquiries = pgTable("inquiries", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export type QuoteService = "grass" | "interlock" | "plants" | "other";
+export type QuoteRequestLine = { service: QuoteService; description: string; quantity: number; unit: string };
+export type QuotationLine = { service: QuoteService | "transport"; description: string; quantity: number; unit: string; rate: number };
+
+export const quoteRequests = pgTable("quote_requests", {
+  id: serial("id").primaryKey(),
+  customerName: text("customer_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  address: text("address").notNull().default(""),
+  requestedServices: jsonb("requested_services").$type<QuoteRequestLine[]>().notNull().default([]),
+  message: text("message").notNull().default(""),
+  quoteLines: jsonb("quote_lines").$type<QuotationLine[]>().notNull().default([]),
+  total: integer("total").notNull().default(0),
+  status: text("status").notNull().default("new"),
+  validUntil: text("valid_until"),
+  terms: text("terms").notNull().default("Quotation is valid for 60 days."),
+  warranty: text("warranty").notNull().default("This project is covered by a 1-year warranty."),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const quoteRates = pgTable("quote_rates", {
+  key: text("key").primaryKey(),
+  label: text("label").notNull(),
+  unit: text("unit").notNull(),
+  rate: integer("rate").notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const admins = pgTable("admins", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),

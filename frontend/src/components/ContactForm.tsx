@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { submitInquiry } from "@/lib/api";
+import { inquiryFormSchema, validationMessage } from "@/lib/validation";
 import { Send } from "lucide-react";
 
 const SERVICES = ["Lawn Care", "Garden Design", "Tree Trimming", "Irrigation", "Landscaping", "Maintenance", "Other"];
@@ -19,10 +20,16 @@ export default function ContactForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const parsed = inquiryFormSchema.safeParse(form);
+    if (!parsed.success) {
+      setStatus("error");
+      setErrorMsg(validationMessage(parsed.error));
+      return;
+    }
     setStatus("loading");
     setErrorMsg("");
     try {
-      await submitInquiry(form);
+      await submitInquiry(parsed.data);
       setStatus("success");
       setForm({ name: "", email: "", phone: "", service: SERVICES[0], message: "" });
     } catch (err) {
@@ -33,7 +40,7 @@ export default function ContactForm() {
 
   if (status === "success") {
     return (
-      <div className="rounded-3xl border border-leaf/30 bg-sage/20 p-8 text-forest">
+      <div className="rounded-3xl border border-leaf/30 bg-sage/20 p-5 text-forest sm:p-8">
         <p className="font-display text-xl font-semibold">Thank you!</p>
         <p className="mt-2 text-sm text-forest/70">
           We&apos;ve received your inquiry and will get back to you soon.
@@ -45,7 +52,7 @@ export default function ContactForm() {
   const inputClass = "w-full rounded-xl border border-forest/15 bg-white px-4 py-3 text-forest placeholder:text-forest/40 outline-none transition focus:border-leaf focus:ring-2 focus:ring-leaf/20";
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-5">
+    <form noValidate onSubmit={handleSubmit} className="grid gap-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-forest">Name</label>

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { cartStorageSchema } from "@/lib/validation";
 
 export type CartItem = {
   key: string; // product + chosen options, so the same product in two sizes is two lines
@@ -59,18 +60,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setItems(
-            parsed.filter(
-              (i) =>
-                i &&
-                typeof i.key === "string" &&
-                typeof i.productId === "number" &&
-                typeof i.quantity === "number"
-            ).map((i) => ({ ...i, stockQuantity: Number.isInteger(i.stockQuantity) ? i.stockQuantity : i.quantity }))
-          );
-        }
+        const result = cartStorageSchema.safeParse(JSON.parse(raw));
+        if (result.success) setItems(result.data);
       }
     } catch {
       // ignore broken saved data

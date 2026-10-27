@@ -3,13 +3,13 @@ import { Phone, Mail, MapPin } from "lucide-react";
 
 export default function Contact() {
   return (
-    <section id="contact" className="mx-auto max-w-6xl border-t border-forest/15 px-5 py-24">
-      <div className="grid gap-14 lg:grid-cols-2">
+    <section id="contact" className="mx-auto max-w-6xl border-t border-forest/15 px-4 py-16 sm:px-5 sm:py-20 lg:py-24">
+      <div className="grid gap-9 sm:gap-14 lg:grid-cols-2">
         <div>
           <span className="text-sm font-medium uppercase tracking-[0.18em] text-leaf">
             Get in touch
           </span>
-          <h2 className="mt-3 font-display text-4xl font-semibold text-forest md:text-5xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold text-forest sm:text-4xl md:text-5xl">
             Get a Free Quote
           </h2>
           <p className="mt-4 max-w-md text-forest/70">
@@ -28,7 +28,7 @@ export default function Contact() {
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sage/40">
                 <Mail className="h-5 w-5 text-forest" />
               </div>
-              <span className="text-forest/80">info@nillagarden.lk</span>
+              <span className="break-all text-forest/80 sm:break-normal">info@nillagarden.lk</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sage/40">
@@ -39,7 +39,7 @@ export default function Contact() {
           </div>
         </div>
 
-        <div className=" border border-forest/10 bg-white/60 p-8">
+        <div className="border border-forest/10 bg-white/60 p-5 sm:p-8">
           <ContactForm />
         </div>
       </div>

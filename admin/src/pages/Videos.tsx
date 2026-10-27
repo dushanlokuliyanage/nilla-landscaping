@@ -16,6 +16,7 @@ import NavTabs from "@/components/NavTabs";
 import MediaPicker from "@/components/MediaPicker";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { videoFormSchema, validationMessage } from "@/lib/validation";
 import { uploadVideo } from "@/lib/upload";
 import { saveMedia } from "@/lib/media";
 import {
@@ -161,19 +162,19 @@ export default function Videos() {
     e.preventDefault();
     setError("");
 
-    if (!form.videoUrl) {
-      setError("Upload a video first");
-      return;
-    }
-
-    const payload: VideoInput = {
+    const parsed = videoFormSchema.safeParse({
       title: form.title.trim(),
       category: form.category.trim() || "Landscaping",
       orientation: form.orientation,
       videoUrl: form.videoUrl,
       posterUrl: form.posterUrl,
       isPublished: form.isPublished,
-    };
+    });
+    if (!parsed.success) {
+      setError(validationMessage(parsed.error));
+      return;
+    }
+    const payload: VideoInput = parsed.data;
 
     setSaving(true);
     try {
@@ -225,7 +226,7 @@ export default function Videos() {
       <AdminHeader />
       <NavTabs />
 
-      <div className="md:ml-56">
+      <div className="ml-16 md:ml-56">
       <main className="mx-auto max-w-5xl px-5 py-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -270,7 +271,7 @@ export default function Videos() {
 
                 <div className={`flex-1 p-4 ${viewMode === "list" ? "sm:flex sm:flex-col sm:justify-center" : ""}`}>
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-forest">{v.title}</h3>
+                    <h3 className="min-w-0 break-words font-semibold text-forest">{v.title}</h3>
                     <span
                       className={`shrink-0  px-2.5 py-0.5 text-xs ${
                         v.isPublished ? "bg-sage/40 text-forest" : "bg-forest/10 text-forest/70"
@@ -335,8 +336,9 @@ export default function Videos() {
       {editing && (
         <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
           <form
+            noValidate
             onSubmit={handleSubmit}
-            className="w-full max-w-lg  bg-cream p-6 shadow-xl"
+            className="w-full max-w-lg bg-cream p-4 shadow-xl sm:p-6"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-forest">
@@ -357,7 +359,7 @@ export default function Videos() {
                 />
               </Field>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Category">
                   <input
                     list="video-categories"

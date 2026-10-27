@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Pencil,
@@ -17,6 +17,7 @@ import NavTabs from "@/components/NavTabs";
 import MediaPicker from "@/components/MediaPicker";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { galleryFormSchema, validationMessage } from "@/lib/validation";
 import { uploadImage } from "@/lib/upload";
 import { saveMedia } from "@/lib/media";
 import {
@@ -104,6 +105,9 @@ export default function Gallery() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [viewMode, setViewMode] = useViewMode("gallery");
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [visibilityFilter, setVisibilityFilter] = useState("all");
 
   async function load() {
     try {
@@ -118,6 +122,17 @@ export default function Gallery() {
   useEffect(() => {
     load();
   }, []);
+
+  const categories = useMemo(() => [...new Set(projects.map((project) => project.category))].sort((a, b) => a.localeCompare(b)), [projects]);
+  const filteredProjects = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return projects.filter((project) => {
+      const matchesSearch = !query || [project.title, project.category, project.location ?? "", String(project.year ?? "")].some((value) => value.toLowerCase().includes(query));
+      const matchesCategory = categoryFilter === "all" || project.category === categoryFilter;
+      const matchesVisibility = visibilityFilter === "all" || (visibilityFilter === "published" ? project.isPublished : !project.isPublished);
+      return matchesSearch && matchesCategory && matchesVisibility;
+    });
+  }, [projects, search, categoryFilter, visibilityFilter]);
 
   async function run(action: () => Promise<void>) {
     setPageError("");
@@ -178,24 +193,20 @@ export default function Gallery() {
     e.preventDefault();
     setError("");
 
-    let year: number | null = null;
-    if (form.year.trim() !== "") {
-      year = Number(form.year);
-      if (!Number.isInteger(year) || year < 1990 || year > 2100) {
-        setError("Year must be a number like 2026");
-        return;
-      }
-    }
-
-    const payload: GalleryProjectInput = {
+    const parsed = galleryFormSchema.safeParse({
       title: form.title.trim(),
       category: form.category.trim() || "Landscaping",
       description: form.description.trim(),
       location: form.location.trim() || null,
-      year,
+      year: form.year.trim() ? Number(form.year) : null,
       images: form.images,
       isPublished: form.isPublished,
-    };
+    });
+    if (!parsed.success) {
+      setError(validationMessage(parsed.error));
+      return;
+    }
+    const payload: GalleryProjectInput = parsed.data;
 
     setSaving(true);
     try {
@@ -247,7 +258,7 @@ export default function Gallery() {
       <AdminHeader />
       <NavTabs />
 
-      <div className="md:ml-56">
+      <div className="ml-16 md:ml-56">
       <main className="mx-auto max-w-5xl px-5 py-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -269,13 +280,28 @@ export default function Gallery() {
           </p>
         )}
 
+        {!loading && projects.length > 0 && (
+          <div className="mb-5 grid gap-3 border border-forest/10 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]">
+            <label className="sr-only" htmlFor="gallery-search">Search gallery projects</label>
+            <input id="gallery-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search title, location, year…" className="w-full border border-forest/15 bg-white px-3.5 py-2.5 text-sm text-forest outline-none focus:border-leaf" />
+            <label className="sr-only" htmlFor="gallery-category-filter">Filter by category</label>
+            <select id="gallery-category-filter" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="border border-forest/15 bg-white px-3.5 py-2.5 text-sm text-forest"><option value="all">All categories</option>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select>
+            <label className="sr-only" htmlFor="gallery-visibility-filter">Filter by visibility</label>
+            <select id="gallery-visibility-filter" value={visibilityFilter} onChange={(event) => setVisibilityFilter(event.target.value)} className="border border-forest/15 bg-white px-3.5 py-2.5 text-sm text-forest"><option value="all">All visibility</option><option value="published">Published</option><option value="hidden">Hidden</option></select>
+          </div>
+        )}
+
         {loading ? (
           <p className="text-forest/60">Loading...</p>
         ) : projects.length === 0 ? (
           <p className="text-forest/60">No projects yet. Add your first one.</p>
+        ) : filteredProjects.length === 0 ? (
+          <p className="border border-dashed border-forest/15 px-5 py-10 text-center text-forest/60">No projects match these filters.</p>
         ) : (
           <div className={viewMode === "cards" ? "grid gap-5 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
-            {projects.map((p, index) => (
+            {filteredProjects.map((p) => {
+              const index = projects.findIndex((project) => project.id === p.id);
+              return (
               <div
                 key={p.id}
                 className={`${viewMode === "list" ? "flex items-stretch" : "overflow-hidden"} border border-forest/10 bg-white shadow-sm ${
@@ -292,7 +318,7 @@ export default function Gallery() {
 
                 <div className={`flex-1 p-4 ${viewMode === "list" ? "sm:flex sm:flex-col sm:justify-center" : ""}`}>
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-forest">{p.title}</h3>
+                    <h3 className="min-w-0 break-words font-semibold text-forest">{p.title}</h3>
                     <span
                       className={`shrink-0  px-2.5 py-0.5 text-xs ${
                         p.isPublished ? "bg-sage/40 text-forest" : "bg-forest/10 text-forest/70"
@@ -355,7 +381,7 @@ export default function Gallery() {
                   </div>
                 </div>
               </div>
-            ))}
+            );})}
           </div>
         )}
       </main>
@@ -364,8 +390,9 @@ export default function Gallery() {
       {editing && (
         <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
           <form
+            noValidate
             onSubmit={handleSubmit}
-            className="w-full max-w-lg  bg-cream p-6 shadow-xl"
+            className="w-full max-w-lg bg-cream p-4 shadow-xl sm:p-6"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-forest">
@@ -410,7 +437,7 @@ export default function Gallery() {
                 />
               </Field>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Area" hint="Town or district only, never a street address">
                   <input
                     value={form.location}

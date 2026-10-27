@@ -50,12 +50,12 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
 
         <div className="p-5 pb-0">
-          <h3 className="font-display text-lg font-semibold text-forest">{product.name}</h3>
+          <h3 className="break-words font-display text-lg font-semibold text-forest">{product.name}</h3>
           <p className="mt-1 line-clamp-2 text-sm text-forest/60">{product.description}</p>
         </div>
       </Link>
 
-      <div className="mt-auto flex items-center justify-between gap-3 p-5">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
         <div>
           <p className="font-medium text-leaf">Rs. {product.price.toLocaleString()} <span className="text-sm font-normal text-forest/50">{product.unit}</span></p>
           {product.stockQuantity > 0 && <p className="mt-1 text-xs text-forest/50">{remaining} {unitLabel} available to add</p>}

@@ -23,16 +23,16 @@ const points = [
 
 export default function WhyUs() {
   return (
-    <section id="why-us" className="relative overflow-hidden bg-forest py-24 text-cream md:py-32">
+    <section id="why-us" className="relative overflow-hidden bg-forest py-16 text-cream sm:py-20 md:py-32">
       <div className="pointer-events-none absolute -right-24 -top-28 h-96 w-96 rounded-full border border-cream/10" />
       <div className="pointer-events-none absolute -right-8 -top-12 h-64 w-64 rounded-full border border-cream/10" />
 
-      <div className="relative mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-[0.85fr_1.15fr] lg:gap-24">
+      <div className="relative mx-auto grid max-w-6xl gap-9 px-4 sm:gap-14 sm:px-5 lg:grid-cols-[0.85fr_1.15fr] lg:gap-24">
         <div className="lg:sticky lg:top-28 lg:self-start">
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-sage">
             The Nilla difference
           </span>
-          <h2 className="mt-5 max-w-lg font-display text-4xl font-medium leading-tight md:text-5xl">
+          <h2 className="mt-5 max-w-lg font-display text-3xl font-medium leading-tight sm:text-4xl md:text-5xl">
             Good garden work feels good from the start.
           </h2>
           <p className="mt-6 max-w-md text-base leading-7 text-cream/70">
@@ -53,7 +53,7 @@ export default function WhyUs() {
             >
               <span className="pt-1 font-display text-sm text-sage">{num}</span>
               <div>
-                <h3 className="font-display text-2xl font-medium text-cream">
+                <h3 className="font-display text-xl font-medium text-cream sm:text-2xl">
                   {title}
                 </h3>
                 <p className="mt-2 max-w-lg text-sm leading-6 text-cream/65">

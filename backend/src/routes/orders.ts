@@ -6,23 +6,24 @@ import { orders, products, type OrderItem } from "../db/schema.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../lib/logging.js";
 import { sendOrderNotification } from "../lib/email.js";
+import { parsePositiveId, readJson } from "../lib/validation.js";
 import type { Env } from "../types.js";
 
 const orderSchema = z.object({
-  customerName: z.string().min(2),
-  phone: z.string().min(7),
-  email: z.string().email().optional().or(z.literal("")),
-  address: z.string().optional(),
-  note: z.string().optional(),
+  customerName: z.string().trim().min(2).max(120),
+  phone: z.string().trim().regex(/^[+()\d\s.-]{7,40}$/),
+  email: z.union([z.literal(""), z.email().max(254)]).optional(),
+  address: z.string().trim().max(1000).optional(),
+  note: z.string().trim().max(2000).optional(),
   items: z
     .array(
       z.object({
-        productId: z.number().int(),
+        productId: z.number().int().positive(),
         quantity: z.number().int().min(1).max(100000),
         options: z.record(z.string(), z.string()).default({}),
       })
     )
-    .min(1),
+    .min(1).max(100),
 });
 
 const statusSchema = z.object({
@@ -47,7 +48,7 @@ function orderQuantities(items: OrderItem[]) {
 
 // Public: customer sends an order request
 orderRoutes.post("/", async (c) => {
-  const parsed = orderSchema.safeParse(await c.req.json());
+  const parsed = orderSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
   const data = parsed.data;
 
@@ -143,8 +144,9 @@ orderRoutes.get("/", requireAuth, requirePermission("orders.read"), async (c) =>
 
 // Admin: change status
 orderRoutes.patch("/:id/status", requireAuth, requirePermission("orders.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  const parsed = statusSchema.safeParse(await c.req.json());
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid order ID" }, 400);
+  const parsed = statusSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: "Invalid status" }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -167,7 +169,8 @@ orderRoutes.patch("/:id/status", requireAuth, requirePermission("orders.manage")
 
 // Admin: delete
 orderRoutes.delete("/:id", requireAuth, requirePermission("orders.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid order ID" }, 400);
   const db = getDb(c.env.DATABASE_URL);
   const [existing] = await db.select().from(orders).where(eq(orders.id, id));
   if (!existing) return c.json({ error: "Not found" }, 404);

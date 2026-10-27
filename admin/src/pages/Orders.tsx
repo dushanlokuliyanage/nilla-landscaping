@@ -4,6 +4,7 @@ import AdminHeader from "@/components/AdminHeader";
 import NavTabs from "@/components/NavTabs";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Pagination from "@/components/Pagination";
 import {
   getOrders,
   updateOrderStatus,
@@ -29,6 +30,8 @@ export default function Orders() {
   const [filter, setFilter] = useState<"all" | OrderStatus>("all");
   const [viewMode, setViewMode] = useViewMode("orders");
   const [canManage, setCanManage] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   useEffect(() => {
     getOrders()
@@ -54,13 +57,15 @@ export default function Orders() {
     () => orders.filter((o) => filter === "all" || o.status === filter),
     [orders, filter]
   );
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / pageSize)));
+  const pageOrders = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="min-h-screen">
       <AdminHeader />
       <NavTabs />
 
-      <div className="md:ml-56">
+      <div className="ml-16 md:ml-56">
       <main className="mx-auto max-w-5xl px-5 py-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -92,7 +97,7 @@ export default function Orders() {
           <p className="text-forest/60">No orders found.</p>
         ) : (
           <div className={viewMode === "cards" ? "grid gap-4 xl:grid-cols-2" : "space-y-3"}>
-            {filtered.map((o) => {
+            {pageOrders.map((o) => {
               const total = o.items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
               return (
                 <div
@@ -101,8 +106,8 @@ export default function Orders() {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-forest">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="min-w-0 break-words font-semibold text-forest">
                           #{o.id} · {o.customerName}
                         </h3>
                         <span
@@ -183,6 +188,7 @@ export default function Orders() {
             })}
           </div>
         )}
+        {!loading && <Pagination page={currentPage} pageSize={pageSize} total={filtered.length} onChange={setPage} />}
       </main>
       </div>
       {deleting && <ConfirmDialog title="Delete order?" description={`Order #${deleting.id} for ${deleting.customerName} will be permanently removed from your order list.`} onClose={() => setDeleting(null)} onConfirm={handleDelete} />}

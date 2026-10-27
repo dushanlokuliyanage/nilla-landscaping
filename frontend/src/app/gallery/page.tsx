@@ -13,11 +13,11 @@ export default function GalleryPage() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-6xl px-5 pb-24 pt-32">
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-5 sm:pb-24 sm:pt-32">
         <span className="text-sm font-medium uppercase tracking-[0.18em] text-leaf">
           Our work
         </span>
-        <h1 className="mt-3 font-display text-4xl font-semibold text-forest md:text-5xl">
+        <h1 className="mt-3 font-display text-3xl font-semibold text-forest sm:text-4xl md:text-5xl">
           Gallery
         </h1>
         <p className="mt-4 max-w-xl text-forest/70">
@@ -28,7 +28,7 @@ export default function GalleryPage() {
           <GalleryGrid />
         </div>
 
-        <div className="mt-20 border border-forest/10 bg-white/60 p-8 text-center sm:p-12">
+        <div className="mt-14 border border-forest/10 bg-white/60 p-5 text-center sm:mt-20 sm:p-12">
           <h2 className="font-display text-2xl font-semibold text-forest md:text-3xl">
             Like what you see?
           </h2>

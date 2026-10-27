@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Minus, Plus, Trash2, Leaf, Send } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { submitOrder } from "@/lib/api";
+import { orderFormSchema, validationMessage } from "@/lib/validation";
 
 const inputClass =
   "w-full border border-forest/15 bg-white px-4 py-3 text-forest placeholder:text-forest/40 outline-none transition focus:border-leaf focus:ring-2 focus:ring-leaf/20";
@@ -24,15 +25,17 @@ export default function CartView() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const parsed = orderFormSchema.safeParse(form);
+    if (!parsed.success) {
+      setStatus("error");
+      setErrorMsg(validationMessage(parsed.error));
+      return;
+    }
     setStatus("loading");
     setErrorMsg("");
     try {
       await submitOrder({
-        customerName: form.customerName.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        address: form.address.trim(),
-        note: form.note.trim(),
+        ...parsed.data,
         items: items.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -50,7 +53,7 @@ export default function CartView() {
 
   if (done) {
     return (
-      <div className="max-w-xl border border-leaf/30 bg-sage/20 p-8 text-forest">
+      <div className="max-w-xl border border-leaf/30 bg-sage/20 p-5 text-forest sm:p-8">
         <p className="font-display text-2xl font-semibold">Order request sent!</p>
         <p className="mt-3 text-forest/70">
           Thank you, {done.name}. We received your request and will contact you on{" "}
@@ -82,16 +85,16 @@ export default function CartView() {
   }
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[1fr_24rem]">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-10">
       <ul className="space-y-4">
         {items.map((i) => {
           const otherProductQuantity = items.filter((other) => other.productId === i.productId && other.key !== i.key).reduce((sum, other) => sum + other.quantity, 0);
           const maxForLine = Math.max(0, i.stockQuantity - otherProductQuantity);
           return <li
             key={i.key}
-            className="flex gap-4 border border-forest/10 bg-white/60 p-4"
+            className="flex gap-3 border border-forest/10 bg-white/60 p-3 sm:gap-4 sm:p-4"
           >
-            <div className="h-24 w-24 shrink-0 overflow-hidden bg-sage/20">
+            <div className="h-16 w-16 shrink-0 overflow-hidden bg-sage/20 sm:h-24 sm:w-24">
               {i.image ? (
                 <img src={i.image} alt={i.name} className="h-full w-full object-cover" />
               ) : (
@@ -106,7 +109,7 @@ export default function CartView() {
                 <div className="min-w-0">
                   <Link
                     href={`/product?slug=${encodeURIComponent(i.slug)}`}
-                    className="font-display text-lg font-semibold text-forest transition hover:text-leaf"
+                    className="break-words font-display text-lg font-semibold text-forest transition hover:text-leaf"
                   >
                     {i.name}
                   </Link>
@@ -132,7 +135,7 @@ export default function CartView() {
                 </button>
               </div>
 
-              <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -172,6 +175,7 @@ export default function CartView() {
       </ul>
 
       <form
+        noValidate
         onSubmit={handleSubmit}
         className="h-fit space-y-4 border border-forest/10 bg-white/60 p-6 lg:sticky lg:top-24"
       >

@@ -12,7 +12,7 @@ export default function ProductPage() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-6xl px-5 pb-24 pt-32">
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-5 sm:pb-24 sm:pt-32">
         <Suspense fallback={<p className="text-forest/60">Loading...</p>}>
           <ProductView />
         </Suspense>

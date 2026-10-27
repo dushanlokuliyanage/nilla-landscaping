@@ -5,15 +5,16 @@ import { getDb } from "../db/index.js";
 import { galleryProjects } from "../db/schema.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../lib/logging.js";
+import { parsePositiveId, readJson } from "../lib/validation.js";
 import type { Env } from "../types.js";
 
 const projectSchema = z.object({
-  title: z.string().min(2),
-  category: z.string().min(1).default("Landscaping"),
-  description: z.string().default(""),
-  location: z.string().nullable().optional(),
+  title: z.string().trim().min(2).max(160),
+  category: z.string().trim().min(1).max(100).default("Landscaping"),
+  description: z.string().trim().max(5000).default(""),
+  location: z.string().trim().max(160).nullable().optional(),
   year: z.number().int().min(1990).max(2100).nullable().optional(),
-  images: z.array(z.string().min(1)).default([]),
+  images: z.array(z.string().trim().min(1).max(2000)).max(30).default([]),
   isPublished: z.boolean().default(true),
 });
 
@@ -59,7 +60,7 @@ galleryRoutes.get("/all", requireAuth, requirePermission("products.manage"), asy
 
 // Admin: create
 galleryRoutes.post("/", requireAuth, requirePermission("products.manage"), async (c) => {
-  const parsed = projectSchema.safeParse(await c.req.json());
+  const parsed = projectSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -73,7 +74,7 @@ galleryRoutes.post("/", requireAuth, requirePermission("products.manage"), async
 
 // Admin: save a new order (defined before "/:id" routes on purpose)
 galleryRoutes.post("/reorder", requireAuth, requirePermission("products.manage"), async (c) => {
-  const parsed = reorderSchema.safeParse(await c.req.json());
+  const parsed = reorderSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: "Invalid order" }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -88,8 +89,9 @@ galleryRoutes.post("/reorder", requireAuth, requirePermission("products.manage")
 
 // Admin: update
 galleryRoutes.put("/:id", requireAuth, requirePermission("products.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  const parsed = projectSchema.safeParse(await c.req.json());
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid gallery project ID" }, 400);
+  const parsed = projectSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -105,8 +107,9 @@ galleryRoutes.put("/:id", requireAuth, requirePermission("products.manage"), asy
 
 // Admin: show or hide on the public page
 galleryRoutes.patch("/:id/published", requireAuth, requirePermission("products.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  const parsed = publishSchema.safeParse(await c.req.json());
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid gallery project ID" }, 400);
+  const parsed = publishSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: "Invalid data" }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -125,7 +128,8 @@ galleryRoutes.patch("/:id/published", requireAuth, requirePermission("products.m
 
 // Admin: delete
 galleryRoutes.delete("/:id", requireAuth, requirePermission("products.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid gallery project ID" }, 400);
   const db = getDb(c.env.DATABASE_URL);
   const [deleted] = await db
     .delete(galleryProjects)

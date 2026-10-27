@@ -8,19 +8,19 @@ const steps = [
 export default function Process() {
   return (
 
-    <section id="process" className="mx-auto max-w-6xl px-5 py-24">
+    <section id="process" className="mx-auto max-w-6xl px-4 py-16 sm:px-5 sm:py-20 lg:py-24">
 
       
       <div className="max-w-xl">
         <span className="text-sm font-medium uppercase tracking-[0.18em] text-leaf">
           How it works
         </span>
-        <h2 className="mt-3 font-display text-4xl font-semibold text-forest md:text-5xl">
+        <h2 className="mt-3 font-display text-3xl font-semibold text-forest sm:text-4xl md:text-5xl">
           Our Process
         </h2>
       </div>
 
-      <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-10 grid gap-7 sm:mt-14 sm:grid-cols-2 sm:gap-10 lg:grid-cols-4">
         {steps.map((s) => (
           <div key={s.num} className="relative">
             <span className="font-display text-5xl font-semibold text-sage">

@@ -183,17 +183,17 @@ export default function VideoCarousel() {
   if (videos.length === 0) return null;
 
   return (
-    <section id="videos" className="relative overflow-hidden bg-sage/20 py-24">
+    <section id="videos" className="relative overflow-hidden bg-sage/20 py-16 sm:py-20 lg:py-24">
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-sage/50 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl px-5">
-        <div className="flex flex-wrap items-end justify-between gap-6">
+        <div className="flex flex-wrap items-end justify-between gap-4 sm:gap-6">
           <div className="max-w-xl">
             <span className="flex items-center gap-3 text-sm font-medium uppercase tracking-[0.18em] text-leaf">
               <span className="h-px w-10 bg-leaf" />
               Our videos
             </span>
-            <h2 className="mt-4 font-display text-4xl font-semibold text-forest md:text-5xl">
+            <h2 className="mt-4 font-display text-3xl font-semibold text-forest sm:text-4xl md:text-5xl">
               Our work in <span className="text-leaf">motion</span>
             </h2>
             <p className="mt-4 text-forest/70">

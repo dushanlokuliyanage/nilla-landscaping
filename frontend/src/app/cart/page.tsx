@@ -12,8 +12,8 @@ export default function CartPage() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-6xl px-5 pb-24 pt-32">
-        <h1 className="font-sans text-4xl font-light tracking-tight text-forest md:text-5xl">
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-5 sm:pb-24 sm:pt-32">
+        <h1 className="font-sans text-3xl font-light tracking-tight text-forest sm:text-4xl md:text-5xl">
     Cart
         </h1>
         <div className="mt-10">

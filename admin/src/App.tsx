@@ -11,6 +11,8 @@ import Gallery from "@/pages/Gallery";
 import Videos from "@/pages/Videos";
 import MediaLibrary from "@/pages/MediaLibrary";
 import Roles from "@/pages/Roles";
+import Reports from "@/pages/Reports";
+import Quotes from "@/pages/Quotes";
 
 export default function App() {
   return (
@@ -24,6 +26,7 @@ export default function App() {
           }
         />
         <Route path="/inquiries" element={<ProtectedRoute permission="inquiries.read"><Inquiries /></ProtectedRoute>} />
+        <Route path="/quotes" element={<ProtectedRoute permission="inquiries.read"><Quotes /></ProtectedRoute>} />
         <Route path="/team" element={<ProtectedRoute permission="team.manage"><Team /></ProtectedRoute>} />
         <Route path="/roles" element={<ProtectedRoute permission="roles.manage"><Roles /></ProtectedRoute>} />
         <Route path="/activity" element={<ProtectedRoute permission="logs.read"><Logs kind="activity" /></ProtectedRoute>} />
@@ -43,6 +46,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/reports" element={<ProtectedRoute permission="orders.read"><Reports /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -97,3 +97,54 @@ export async function sendOrderNotification(
     `,
   });
 }
+
+type QuoteRequestEmail = {
+  id: number;
+  customerName: string;
+  email: string;
+  phone: string;
+  address: string;
+  message: string;
+  requestedServices: { service: string; description: string; quantity: number; unit: string }[];
+};
+
+export async function sendQuoteRequestNotification(request: QuoteRequestEmail, env: { RESEND_API_KEY: string; ADMIN_EMAIL: string }) {
+  const lines = request.requestedServices.map((line) => `<li>${esc(line.description)} — ${line.quantity} ${esc(line.unit)}</li>`).join("");
+  const resend = new Resend(env.RESEND_API_KEY);
+  await resend.emails.send({
+    from: "Nilla Garden <onboarding@resend.dev>",
+    to: env.ADMIN_EMAIL,
+    subject: `New quote request #${request.id + 1350} from ${request.customerName}`,
+    html: `<h2>New quote request #${request.id + 1350}</h2><p><strong>Name:</strong> ${esc(request.customerName)}</p><p><strong>Email:</strong> ${esc(request.email)}</p><p><strong>Phone:</strong> ${esc(request.phone)}</p><p><strong>Address:</strong> ${esc(request.address || "-")}</p><h3>Requested work</h3><ul>${lines}</ul><p><strong>Message:</strong><br/>${esc(request.message || "-")}</p>`,
+  });
+}
+
+export async function sendQuoteReceivedConfirmation(request: Pick<QuoteRequestEmail, "customerName" | "email">, env: { RESEND_API_KEY: string }) {
+  const resend = new Resend(env.RESEND_API_KEY);
+  await resend.emails.send({
+    from: "Nilla Garden <onboarding@resend.dev>",
+    to: request.email,
+    subject: "We received your quote request — Nilla Garden",
+    html: `<p>Hi ${esc(request.customerName)},</p><p>Thank you for requesting a quotation from Nilla Garden Service and Landscaping Company. We have received your project details and will review them before sending a quotation.</p><p>— Nilla Garden Team</p>`,
+  });
+}
+
+export async function sendCustomerQuote(quote: {
+  quoteNumber: number;
+  customerName: string;
+  email: string;
+  quoteLines: { description: string; quantity: number; unit: string; rate: number }[];
+  total: number;
+  validUntil: string | null;
+  terms: string;
+  warranty: string;
+}, env: { RESEND_API_KEY: string }) {
+  const rows = quote.quoteLines.map((line) => `<tr><td style="padding:8px;border-bottom:1px solid #ddd">${esc(line.description)}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center">${line.quantity} ${esc(line.unit)}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">Rs. ${line.rate.toLocaleString("en-LK")}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">Rs. ${(line.quantity * line.rate).toLocaleString("en-LK")}</td></tr>`).join("");
+  const resend = new Resend(env.RESEND_API_KEY);
+  await resend.emails.send({
+    from: "Nilla Garden <onboarding@resend.dev>",
+    to: quote.email,
+    subject: `Quotation #${quote.quoteNumber} — Nilla Garden Service and Landscaping Company`,
+    html: `<div style="font-family:Arial,sans-serif;color:#1d2b20;max-width:760px"><p style="text-align:center;color:#4d80bd;font-size:26px;font-family:Georgia,serif"><strong>SAMANTHA ENTERPRISES</strong><br/><span style="font-size:13px">Government &amp; Private Civil Contractor, Gardening Works and Land Reclamation and Filling</span><br/><span style="font-size:13px">Provincial Council Reg: W/15616 | CIDA Reg: 17743 | SLIER DC No: RR00094233</span></p><hr/><h2 style="color:#159447">Nilla Garden Service and Landscaping Company</h2><p>Quotation No: ${quote.quoteNumber}</p><p>Date: ${new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Colombo" }).format(new Date())}</p><p>Dear ${esc(quote.customerName)}, thank you for considering our company for your gardening needs. Please find your quotation below.</p><table style="border-collapse:collapse;width:100%"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #444">Description</th><th style="padding:8px;border-bottom:1px solid #444">Qty</th><th style="text-align:right;padding:8px;border-bottom:1px solid #444">Rate</th><th style="text-align:right;padding:8px;border-bottom:1px solid #444">Amount</th></tr></thead><tbody>${rows}</tbody></table><h3 style="text-align:right">Total Amount Payable: Rs. ${quote.total.toLocaleString("en-LK")}/-</h3><p><strong>Terms and Conditions:</strong><br/>${esc(quote.terms)}<br/>${esc(quote.warranty)}${quote.validUntil ? `<br/>Valid until: ${esc(quote.validUntil)}` : ""}</p></div>`,
+  });
+}

@@ -5,11 +5,12 @@ import { getDb } from "../db/index.js";
 import { videos } from "../db/schema.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../lib/logging.js";
+import { parsePositiveId, readJson } from "../lib/validation.js";
 import type { Env } from "../types.js";
 
 const videoSchema = z.object({
-  title: z.string().min(2),
-  category: z.string().min(1).default("Landscaping"),
+  title: z.string().trim().min(2).max(160),
+  category: z.string().trim().min(1).max(100).default("Landscaping"),
   videoUrl: z
     .string()
     .url()
@@ -17,7 +18,7 @@ const videoSchema = z.object({
       (v) => v.startsWith("https://res.cloudinary.com/"),
       "Please upload the video with the uploader"
     ),
-  posterUrl: z.string().default(""),
+  posterUrl: z.union([z.literal(""), z.url()]).default(""),
   orientation: z.enum(["vertical", "landscape"]).default("vertical"),
   isPublished: z.boolean().default(true),
 });
@@ -62,7 +63,7 @@ videoRoutes.get("/all", requireAuth, requirePermission("products.manage"), async
 });
 
 videoRoutes.post("/", requireAuth, requirePermission("products.manage"), async (c) => {
-  const parsed = videoSchema.safeParse(await c.req.json());
+  const parsed = videoSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -73,7 +74,7 @@ videoRoutes.post("/", requireAuth, requirePermission("products.manage"), async (
 
 // Defined before the "/:id" routes on purpose
 videoRoutes.post("/reorder", requireAuth, requirePermission("products.manage"), async (c) => {
-  const parsed = reorderSchema.safeParse(await c.req.json());
+  const parsed = reorderSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: "Invalid order" }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -84,8 +85,9 @@ videoRoutes.post("/reorder", requireAuth, requirePermission("products.manage"), 
 });
 
 videoRoutes.put("/:id", requireAuth, requirePermission("products.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  const parsed = videoSchema.safeParse(await c.req.json());
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid video ID" }, 400);
+  const parsed = videoSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -100,8 +102,9 @@ videoRoutes.put("/:id", requireAuth, requirePermission("products.manage"), async
 });
 
 videoRoutes.patch("/:id/published", requireAuth, requirePermission("products.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  const parsed = publishSchema.safeParse(await c.req.json());
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid video ID" }, 400);
+  const parsed = publishSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: "Invalid data" }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -119,7 +122,8 @@ videoRoutes.patch("/:id/published", requireAuth, requirePermission("products.man
 });
 
 videoRoutes.delete("/:id", requireAuth, requirePermission("products.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid video ID" }, 400);
   const db = getDb(c.env.DATABASE_URL);
   const [deleted] = await db
     .delete(videos)

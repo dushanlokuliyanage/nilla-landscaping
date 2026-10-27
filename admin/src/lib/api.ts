@@ -19,6 +19,30 @@ export type Inquiry = {
   createdAt: string;
 };
 
+export type QuoteService = "grass" | "interlock" | "plants" | "other";
+export type QuoteRequest = {
+  id: number;
+  quoteNumber: number;
+  customerName: string;
+  email: string;
+  phone: string;
+  address: string;
+  requestedServices: { service: QuoteService; description: string; quantity: number; unit: string }[];
+  message: string;
+  quoteLines: { service: QuoteService | "transport"; description: string; quantity: number; unit: string; rate: number }[];
+  total: number;
+  status: "new" | "draft" | "sent" | "accepted" | "declined";
+  validUntil: string | null;
+  terms: string;
+  warranty: string;
+  sentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+export type QuoteRate = { key: QuoteService | "transport"; label: string; unit: string; rate: number; updatedAt: string };
+export type QuoteLine = QuoteRequest["quoteLines"][number];
+export type QuoteDistance = { origin: string; destination: string; distanceKm: number; ratePerKm: number; travelCharge: number };
+
 export type ProductOption = { name: string; values: string[] };
 
 export type Product = {
@@ -165,6 +189,24 @@ export async function updateInquiryFollowUp(id: number, status: Inquiry["followU
 
 export async function deleteInquiry(id: number) {
   return request(`/api/inquiries/${id}`, { method: "DELETE" });
+}
+
+export function getQuoteRequests(): Promise<QuoteRequest[]> { return request("/api/quotes"); }
+export function getQuoteRates(): Promise<QuoteRate[]> { return request("/api/quotes/rates"); }
+export function calculateQuoteDistance(id: number): Promise<QuoteDistance> {
+  return request(`/api/quotes/${id}/distance`, { method: "POST" });
+}
+export function saveQuoteRates(rates: { key: QuoteRate["key"]; rate: number }[]) {
+  return request("/api/quotes/rates", { method: "PUT", body: JSON.stringify({ rates }) });
+}
+export function saveQuotation(id: number, data: { quoteLines: QuoteLine[]; validUntil: string | null; terms: string; warranty: string }): Promise<QuoteRequest> {
+  return request(`/api/quotes/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+export function sendQuotation(id: number): Promise<QuoteRequest> {
+  return request(`/api/quotes/${id}/send`, { method: "POST" });
+}
+export function updateQuoteStatus(id: number, status: "accepted" | "declined"): Promise<QuoteRequest> {
+  return request(`/api/quotes/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
 }
 
 // ---- products ----

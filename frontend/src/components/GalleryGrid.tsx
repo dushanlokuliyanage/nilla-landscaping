@@ -3,13 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ImageOff, Images, X } from "lucide-react";
 import { getGalleryProjects, type GalleryProject } from "@/lib/api";
+import Pagination from "@/components/Pagination";
 
 export default function GalleryGrid() {
   const [projects, setProjects] = useState<GalleryProject[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [category, setCategory] = useState("All");
+  const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<number | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   useEffect(() => {
     getGalleryProjects()
@@ -25,10 +29,16 @@ export default function GalleryGrid() {
     [projects]
   );
 
-  const visible = useMemo(
-    () => (category === "All" ? projects : projects.filter((p) => p.category === category)),
-    [projects, category]
-  );
+  const visible = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return projects.filter((project) => {
+      const matchesCategory = category === "All" || project.category === category;
+      const matchesSearch = !query || [project.title, project.category, project.location ?? "", String(project.year ?? "")].some((value) => value.toLowerCase().includes(query));
+      return matchesCategory && matchesSearch;
+    });
+  }, [projects, category, search]);
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(visible.length / pageSize)));
+  const pageProjects = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const active = projects.find((p) => p.id === openId) ?? null;
 
@@ -72,7 +82,11 @@ export default function GalleryGrid() {
 
   return (
     <div>
-      {categories.length > 2 && (
+      <div className="mb-6 max-w-md">
+        <label className="sr-only" htmlFor="public-gallery-search">Search projects</label>
+        <input id="public-gallery-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search projects, areas, or years…" className="w-full border border-forest/20 bg-white/80 px-4 py-3 text-sm text-forest outline-none transition focus:border-leaf" />
+      </div>
+      {categories.length > 1 && (
         <div className="mb-8 flex flex-wrap gap-2">
           {categories.map((c) => (
             <button
@@ -91,8 +105,10 @@ export default function GalleryGrid() {
         </div>
       )}
 
+      {visible.length === 0 && <p className="border border-dashed border-forest/15 px-5 py-10 text-center text-forest/60">No projects match your search.</p>}
+
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {visible.map((p) => (
+        {pageProjects.map((p) => (
           <button
             key={p.id}
             type="button"
@@ -135,6 +151,7 @@ export default function GalleryGrid() {
           </button>
         ))}
       </div>
+      <Pagination page={currentPage} pageSize={pageSize} total={visible.length} onChange={setPage} />
 
       {active && (
         <div

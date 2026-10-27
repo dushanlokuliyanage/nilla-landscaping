@@ -5,18 +5,19 @@ import { admins } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { verifyPassword, signToken } from "../lib/auth.js";
 import { logAccess } from "../lib/logging.js";
+import { readJson } from "../lib/validation.js";
 import { requireAuth } from "../middleware/auth.js";
 import type { Env } from "../types.js";
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+  email: z.email().trim().max(254),
+  password: z.string().min(6).max(128),
 });
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
 authRoutes.post("/login", async (c) => {
-  const body = await c.req.json();
+  const body = await readJson(c.req.raw);
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
 

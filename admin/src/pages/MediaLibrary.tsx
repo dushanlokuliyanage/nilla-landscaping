@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FolderUp, Image as ImageIcon, LoaderCircle, Upload, Video, X } from "lucide-react";
 import AdminHeader from "@/components/AdminHeader";
 import NavTabs from "@/components/NavTabs";
@@ -7,6 +7,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { getAllGalleryProjects, getAllVideos, getProducts } from "@/lib/api";
 import { getSavedMedia, mergeMedia, removeMediaFromLibrary, saveMedia, type MediaAsset } from "@/lib/media";
 import { uploadImage, uploadVideo } from "@/lib/upload";
+import { mediaBatchSchema, validationMessage } from "@/lib/validation";
 
 export default function MediaLibrary() {
   const [assets, setAssets] = useState<MediaAsset[]>(getSavedMedia);
@@ -20,6 +21,8 @@ export default function MediaLibrary() {
   const [error, setError] = useState("");
   const [viewMode, setViewMode] = useViewMode("media");
   const [deleting, setDeleting] = useState<MediaAsset | null>(null);
+  const [search, setSearch] = useState("");
+  const [kindFilter, setKindFilter] = useState("all");
   const imageInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
@@ -47,25 +50,13 @@ export default function MediaLibrary() {
   }, []);
 
   async function handleFiles(files: File[], kind: "image" | "video") {
-    if (!files.length) return;
     setError("");
-    const selected = files.filter((file) => file.type.startsWith(`${kind}/`));
-    if (selected.length !== files.length) {
-      setError(kind === "image" ? "Choose image files only." : "Choose video files only.");
+    const parsedBatch = mediaBatchSchema.safeParse({ kind, files });
+    if (!parsedBatch.success) {
+      setError(validationMessage(parsedBatch.error));
       return;
     }
-    if (kind === "image" && selected.length > 500) {
-      setError("Choose up to 500 images at a time.");
-      return;
-    }
-    if (kind === "image" && selected.some((file) => file.size > 5 * 1024 * 1024)) {
-      setError("Each image must be 5 MB or smaller.");
-      return;
-    }
-    if (kind === "image" && selected.reduce((total, file) => total + file.size, 0) > 100 * 1024 * 1024) {
-      setError("The selected images are over 100 MB in total. Choose a smaller batch.");
-      return;
-    }
+    const selected = parsedBatch.data.files;
     setUploading(true);
     try {
       for (const [index, file] of selected.entries()) {
@@ -106,6 +97,13 @@ export default function MediaLibrary() {
 
   const imageCount = assets.filter((asset) => asset.kind === "image").length;
   const videoCount = assets.filter((asset) => asset.kind === "video").length;
+  const filteredAssets = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return assets.filter((asset) => {
+      const filename = asset.url.split("/").pop()?.split("?")[0] ?? "";
+      return (kindFilter === "all" || asset.kind === kindFilter) && (!query || filename.toLowerCase().includes(query) || asset.url.toLowerCase().includes(query));
+    });
+  }, [assets, search, kindFilter]);
 
   function handleDeleteMedia() {
     if (!deleting) return;
@@ -118,7 +116,7 @@ export default function MediaLibrary() {
     <div className="min-h-screen">
       <AdminHeader />
       <NavTabs />
-      <div className="md:ml-56">
+      <div className="ml-16 md:ml-56">
         <main className="mx-auto max-w-6xl px-5 py-8">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -139,6 +137,15 @@ export default function MediaLibrary() {
             <span className="border border-forest/10 bg-white px-3 py-2">{videoCount} videos</span>
           </div>
 
+          {!loading && assets.length > 0 && (
+            <div className="mb-5 grid gap-3 border border-forest/10 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
+              <label className="sr-only" htmlFor="media-search">Search media</label>
+              <input id="media-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by file name…" className="w-full border border-forest/15 bg-white px-3.5 py-2.5 text-sm text-forest outline-none focus:border-leaf" />
+              <label className="sr-only" htmlFor="media-kind-filter">Filter media type</label>
+              <select id="media-kind-filter" value={kindFilter} onChange={(event) => setKindFilter(event.target.value)} className="border border-forest/15 bg-white px-3.5 py-2.5 text-sm text-forest"><option value="all">All media</option><option value="image">Images</option><option value="video">Videos</option></select>
+            </div>
+          )}
+
           <input ref={imageInput} type="file" accept="image/*" multiple className="hidden" onChange={(event) => onFileInput(event, "image")} />
           <input ref={folderInput} type="file" accept="image/*" multiple className="hidden" onChange={(event) => onFileInput(event, "image")} />
           <input ref={videoInput} type="file" accept="video/*" multiple className="hidden" onChange={(event) => onFileInput(event, "video")} />
@@ -150,9 +157,11 @@ export default function MediaLibrary() {
               <p className="mt-3 font-medium text-forest">Your media library is empty</p>
               <p className="mt-1 text-sm text-forest/55">Upload images or videos from your computer, or add media to a product or gallery project.</p>
             </div>
+          ) : filteredAssets.length === 0 ? (
+            <p className="border border-dashed border-forest/20 bg-white/60 px-5 py-10 text-center text-sm text-forest/60">No media matches these filters.</p>
           ) : (
             <div className={viewMode === "cards" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "flex flex-col gap-3"}>
-              {assets.map((asset) => (
+              {filteredAssets.map((asset) => (
                 <article key={`${asset.kind}:${asset.url}`} className={`${viewMode === "list" ? "flex items-stretch" : "overflow-hidden"} border border-forest/10 bg-white shadow-sm`}>
                   {asset.kind === "image" ? <img src={asset.url} alt="" className={viewMode === "list" ? "h-24 w-36 shrink-0 object-cover" : "h-44 w-full object-cover"} /> : (
                     <div className={`relative bg-forest/10 ${viewMode === "list" ? "h-24 w-36 shrink-0" : "h-44"}`}>
@@ -174,8 +183,8 @@ export default function MediaLibrary() {
         </main>
       </div>
       {showUploader && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !uploading) setShowUploader(false); }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="upload-media-title" className="w-full max-w-xl border-t-4 border-t-blue-700 bg-white text-slate-900 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-3 sm:items-center sm:p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !uploading) setShowUploader(false); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="upload-media-title" className="my-auto max-h-[92vh] w-full max-w-xl overflow-y-auto border-t-4 border-t-blue-700 bg-white text-slate-900 shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
               <div>
                 <h2 id="upload-media-title" className="text-lg font-semibold tracking-tight">Upload media</h2>

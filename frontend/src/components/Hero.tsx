@@ -4,7 +4,7 @@ import { ArrowRight, Leaf } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden pt-28 pb-20 md:pt-28 md:pb-28">
+    <section className="relative overflow-hidden pt-24 pb-16 sm:pt-28 sm:pb-20 md:pb-28">
       <div className="absolute -top-24 -right-24 h-[28rem] w-[28rem] rounded-full bg-sage/40 blur-3xl" />
       <div className="absolute bottom-0 -left-24 h-[22rem] w-[22rem] rounded-full bg-earth/20 blur-3xl" />
 
@@ -18,19 +18,19 @@ export default function Hero() {
             <span className="text-leaf">Care</span>
             <span className="ml-1 hidden h-px flex-1 bg-forest/10 sm:block" />
           </div>
-          <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-forest md:text-6xl lg:text-7xl">
+          <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-forest sm:mt-6 sm:text-5xl md:text-6xl lg:text-7xl">
             Outdoor spaces that feel <span className="text-leaf">alive</span>.
           </h1>
 
-          <p className="mt-6 max-w-xl text-lg text-forest/70">
+          <p className="mt-5 max-w-xl text-base text-forest/70 sm:mt-6 sm:text-lg">
             Nilla Landscaping and Garden Service designs, builds and maintains
             beautiful gardens and lawns, so you can simply enjoy them.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div className="mt-7 flex flex-wrap gap-3 sm:mt-8 sm:gap-4">
             <Link
               href="#contact"
-              className="group inline-flex items-center gap-2 rounded-full bg-forest px-7 py-3.5 font-medium text-cream transition hover:bg-leaf"
+              className="group inline-flex items-center gap-2 rounded-full bg-forest px-5 py-3.5 text-sm font-medium text-cream transition hover:bg-leaf sm:px-7 sm:text-base"
             >
               Get a Free Quote
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
@@ -38,7 +38,7 @@ export default function Hero() {
 
             <Link
               href="#services"
-              className="inline-flex items-center rounded-full border border-forest/20 px-7 py-3.5 font-medium text-forest transition hover:bg-white"
+              className="inline-flex items-center rounded-full border border-forest/20 px-5 py-3.5 text-sm font-medium text-forest transition hover:bg-white sm:px-7 sm:text-base"
             >
               Our Services
             </Link>
@@ -57,7 +57,7 @@ export default function Hero() {
             />
           </div>
 
-          <div className="absolute -bottom-6 -left-4 flex items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-xl md:-left-8">
+          <div className="absolute -bottom-4 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-xl sm:-bottom-6 sm:-left-4 sm:px-5 sm:py-4 md:-left-8">
             <div>
               <p className="text-sm font-semibold text-forest">Free quote</p>
               <p className="text-xs text-forest/60">Tell us about your garden</p>

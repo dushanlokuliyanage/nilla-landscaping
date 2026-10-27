@@ -139,7 +139,7 @@ export default function ProductView() {
 
         {/* Details */}
         <div>
-          <h1 className="font-display text-3xl font-semibold text-forest md:text-4xl">
+          <h1 className="break-words font-display text-3xl font-semibold text-forest md:text-4xl">
             {product.name}
           </h1>
           <p className="mt-3 text-xl font-medium text-leaf">

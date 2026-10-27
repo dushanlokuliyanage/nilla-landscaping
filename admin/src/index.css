@@ -63,3 +63,48 @@ a:focus-visible {
     min-width: 320px;
   }
 }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { min-width: 0; background: white; color: #111; }
+  .report-page > header,
+  .report-page > aside,
+  .report-controls,
+  .report-screen-heading { display: none !important; }
+  .report-page > div { margin: 0 !important; }
+  .report-page main { max-width: none !important; padding: 0 !important; }
+  .report-content article,
+  .report-content section > div { break-inside: avoid; box-shadow: none !important; }
+  .report-content { color: #111; }
+  .report-letterhead { margin-bottom: 18px; color: #4d80bd; font-family: Georgia, "Times New Roman", serif; }
+  .report-contractor-name { margin: 0; font-size: 31pt; line-height: 1.05; letter-spacing: 0.02em; text-shadow: 1px 2px 1px rgb(0 0 0 / 22%); }
+  .report-contractor-details { margin: 2px 0 0; font-size: 11pt; line-height: 1.25; }
+  .report-letterhead hr { margin: 16px 0 18px; border: 0; border-top: 1px solid #333; }
+  .report-company-name { margin: 0; color: #00a94f; text-align: left; font-size: 17pt; font-weight: 400; }
+  .report-pdf-title { margin: 10px 0 0; color: #14401f; text-align: left; font-family: Arial, sans-serif; font-size: 20pt; font-weight: 700; }
+  .report-pdf-description { margin: 3px 0 0; color: #555; text-align: left; font-family: Arial, sans-serif; font-size: 10pt; }
+  .report-period { margin: 5px 0 0; color: #555; text-align: left; font-family: Arial, sans-serif; font-size: 9pt; }
+
+  body:has(.quote-admin-page) * { visibility: hidden !important; }
+  body:has(.quote-admin-page) { background: white; color: #111; }
+  body:has(.quote-admin-page) .quote-print,
+  body:has(.quote-admin-page) .quote-print * { visibility: visible !important; }
+  body:has(.quote-admin-page) .quote-print { display: block !important; position: absolute; top: 0; left: 0; width: 100%; color: #222; font-family: Arial, sans-serif; font-size: 10pt; }
+  .quote-print-contact { margin-bottom: 8px; border-bottom: 1px solid #777; padding-bottom: 5px; text-align: center; font-size: 7pt; }
+  .quote-print-brand { margin: 0; color: #4d80bd; text-align: center; font-family: Georgia, "Times New Roman", serif; font-size: 31pt; font-weight: 400; line-height: 1.05; text-shadow: 1px 2px 1px rgb(0 0 0 / 20%); }
+  .quote-print-subtitle { margin: 3px 0 0; color: #4d80bd; text-align: center; font-family: Georgia, "Times New Roman", serif; font-size: 10pt; }
+  .quote-print hr { margin: 15px 0 17px; border: 0; border-top: 1px solid #333; }
+  .quote-print-company { margin: 0; color: #00a94f; font-family: Georgia, "Times New Roman", serif; font-size: 17pt; font-weight: 400; }
+  .quote-print-meta { display: flex; justify-content: space-between; margin-top: 16px; font-size: 10pt; }
+  .quote-print-customer { margin-top: 13px; line-height: 1.55; }
+  .quote-print-intro { margin: 16px 0 12px; line-height: 1.5; }
+  .quote-print table { width: 100%; border-collapse: collapse; }
+  .quote-print th { border-bottom: 1px solid #444; padding: 8px 6px; text-align: left; }
+  .quote-print th:not(:first-child), .quote-print td:not(:first-child) { text-align: right; }
+  .quote-print td { border-bottom: 1px solid #ddd; padding: 8px 6px; }
+  .quote-print-total { display: flex; justify-content: flex-end; gap: 28px; margin: 14px 0; font-weight: 700; }
+  .quote-print-terms-title { margin: 20px 0 5px; font-size: 10pt; }
+  .quote-print-terms { margin: 0; padding-left: 18px; line-height: 1.5; }
+}
+
+.quote-print { display: none; }

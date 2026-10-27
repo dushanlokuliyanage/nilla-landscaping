@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, X, ImageOff, Upload } from "lucide-react";
 import AdminHeader from "@/components/AdminHeader";
 import NavTabs from "@/components/NavTabs";
 import MediaPicker from "@/components/MediaPicker";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { productFormSchema, validationMessage } from "@/lib/validation";
 import { uploadImage } from "@/lib/upload";
 import { saveMedia } from "@/lib/media";
 import {
@@ -103,6 +104,9 @@ export default function Products() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [viewMode, setViewMode] = useViewMode("products");
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [stockFilter, setStockFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("name");
 
   async function load() {
     try {
@@ -115,6 +119,15 @@ export default function Products() {
   useEffect(() => {
     load();
   }, []);
+
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return products.filter((product) => {
+      const matchesSearch = !query || [product.name, product.description, product.unit, ...product.options.flatMap((option) => [option.name, ...option.values])].some((value) => value.toLowerCase().includes(query));
+      const matchesStock = stockFilter === "all" || (stockFilter === "in-stock" ? product.stockQuantity > 0 : product.stockQuantity <= 0);
+      return matchesSearch && matchesStock;
+    }).sort((a, b) => sortOrder === "price-low" ? a.price - b.price : sortOrder === "price-high" ? b.price - a.price : a.name.localeCompare(b.name));
+  }, [products, search, stockFilter, sortOrder]);
 
   function openNew() {
     setForm(emptyForm);
@@ -158,27 +171,21 @@ export default function Products() {
     e.preventDefault();
     setError("");
 
-    const price = Number(form.price);
-    if (!Number.isInteger(price) || price < 0) {
-      setError("Price must be a whole number (LKR)");
-      return;
-    }
-    const stockQuantity = Number(form.stockQuantity);
-    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
-      setError("Stock quantity must be a whole number zero or greater");
-      return;
-    }
-
-    const payload: ProductInput = {
+    const parsed = productFormSchema.safeParse({
       name: form.name.trim(),
       description: form.description.trim(),
-      price,
+      price: Number(form.price),
       unit: form.unit.trim() || "per kg",
-      stockQuantity,
-      inStock: stockQuantity > 0,
+      stockQuantity: Number(form.stockQuantity),
       images: form.images,
       options: textToOptions(form.options),
-    };
+    });
+    if (!parsed.success) {
+      setError(validationMessage(parsed.error));
+      return;
+    }
+    const payload: ProductInput = { ...parsed.data, inStock: parsed.data.stockQuantity > 0 };
+    const stockQuantity = parsed.data.stockQuantity;
 
     setSaving(true);
     try {
@@ -213,7 +220,7 @@ export default function Products() {
       <AdminHeader />
       <NavTabs />
 
-      <div className="md:ml-56">
+      <div className="ml-16 md:ml-56">
       <main className="mx-auto max-w-5xl px-5 py-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -229,13 +236,26 @@ export default function Products() {
           </div>
         </div>
 
+        {!loading && products.length > 0 && (
+          <div className="mb-5 grid gap-3 border border-forest/10 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]">
+            <label className="sr-only" htmlFor="product-search">Search products</label>
+            <input id="product-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products…" className="w-full border border-forest/15 bg-white px-3.5 py-2.5 text-sm text-forest outline-none focus:border-leaf" />
+            <label className="sr-only" htmlFor="product-stock-filter">Filter by stock</label>
+            <select id="product-stock-filter" value={stockFilter} onChange={(event) => setStockFilter(event.target.value)} className="border border-forest/15 bg-white px-3.5 py-2.5 text-sm text-forest"><option value="all">All stock</option><option value="in-stock">In stock</option><option value="out-of-stock">Out of stock</option></select>
+            <label className="sr-only" htmlFor="product-sort">Sort products</label>
+            <select id="product-sort" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} className="border border-forest/15 bg-white px-3.5 py-2.5 text-sm text-forest"><option value="name">Name</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select>
+          </div>
+        )}
+
         {loading ? (
           <p className="text-forest/60">Loading...</p>
         ) : products.length === 0 ? (
           <p className="text-forest/60">No products yet. Add your first one.</p>
+        ) : filteredProducts.length === 0 ? (
+          <p className="border border-dashed border-forest/15 px-5 py-10 text-center text-forest/60">No products match these filters.</p>
         ) : (
           <div className={viewMode === "cards" ? "grid gap-5 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
-            {products.map((p) => (
+            {filteredProducts.map((p) => (
               <div
                 key={p.id}
                 className={`${viewMode === "list" ? "flex items-stretch" : "overflow-hidden"} border border-forest/10 bg-white shadow-sm`}
@@ -250,7 +270,7 @@ export default function Products() {
 
                 <div className={`flex-1 p-4 ${viewMode === "list" ? "sm:flex sm:flex-col sm:justify-center" : ""}`}>
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-forest">{p.name}</h3>
+                    <h3 className="min-w-0 break-words font-semibold text-forest">{p.name}</h3>
                     <span
                       className={`shrink-0  px-2.5 py-0.5 text-xs ${
                         p.stockQuantity > 0 ? "bg-sage/40 text-forest" : "bg-red-100 text-red-700"
@@ -296,8 +316,9 @@ export default function Products() {
       {editing && (
         <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
           <form
+        noValidate
             onSubmit={handleSubmit}
-            className="w-full max-w-lg  bg-cream p-6 shadow-xl"
+            className="w-full max-w-lg bg-cream p-4 shadow-xl sm:p-6"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-forest">
@@ -327,7 +348,7 @@ export default function Products() {
                 />
               </Field>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Price (LKR)">
                   <input
                     required

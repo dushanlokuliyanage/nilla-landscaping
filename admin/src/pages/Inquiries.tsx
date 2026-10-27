@@ -5,6 +5,7 @@ import NavTabs from "@/components/NavTabs";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import AdminHeader from "@/components/AdminHeader";
+import Pagination from "@/components/Pagination";
 
 type StatusFilter = "all" | "unread" | "read";
 export default function Inquiries() {
@@ -17,6 +18,8 @@ export default function Inquiries() {
   const [savingFollowUp, setSavingFollowUp] = useState<number | null>(null);
   const [viewMode, setViewMode] = useViewMode("inquiries");
   const [canManage, setCanManage] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   async function load() {
     setLoading(true);
@@ -78,6 +81,8 @@ export default function Inquiries() {
     if (query && !`${inquiry.name} ${inquiry.email} ${inquiry.phone ?? ""} ${inquiry.message}`.toLowerCase().includes(query)) return false;
     return true;
   }), [inquiries, search, serviceFilter, statusFilter]);
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filteredInquiries.length / pageSize)));
+  const pageInquiries = filteredInquiries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
 
 
@@ -86,7 +91,7 @@ export default function Inquiries() {
       <AdminHeader unreadCount={stats.unread} />
       <NavTabs />
 
-      <div className="md:ml-56">
+      <div className="ml-16 md:ml-56">
       <main className="mx-auto max-w-6xl px-5 py-8">
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -113,14 +118,14 @@ export default function Inquiries() {
         </section>
 
         <section aria-label="Filter inquiries" className="mb-6 flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[200px] flex-1">
+          <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[200px]">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-forest/40" />
             <input type="search" placeholder="Search name, email, phone, message..." value={search} onChange={(event) => setSearch(event.target.value)} className="w-full border border-forest/15 bg-white py-2.5 pl-10 pr-4 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20" />
           </div>
-          <select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)} className="border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20">
+          <select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)} className="w-full border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20 sm:w-auto">
             <option value="all">All statuses</option><option value="unread">Unread only</option><option value="read">Read only</option>
           </select>
-          <select aria-label="Filter by service" value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)} className="border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20">
+          <select aria-label="Filter by service" value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)} className="w-full border border-forest/15 bg-white px-4 py-2.5 text-sm text-forest outline-none focus:border-leaf focus:ring-2 focus:ring-leaf/20 sm:w-auto">
             <option value="all">All services</option>{services.map((service) => <option key={service} value={service}>{service}</option>)}
           </select>
         </section>
@@ -133,7 +138,7 @@ export default function Inquiries() {
           <p className="text-forest/60">No inquiries match your filters.</p>
         ) : (
           <div className={viewMode === "cards" ? "grid gap-4 xl:grid-cols-2" : "space-y-3"}>
-            {filteredInquiries.map((inq) => (
+            {pageInquiries.map((inq) => (
               <div
                 key={inq.id}
                 className={` border p-5 shadow-sm ${
@@ -144,8 +149,8 @@ export default function Inquiries() {
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-forest">{inq.name}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="min-w-0 break-words font-semibold text-forest">{inq.name}</h3>
                       {!inq.isRead && (
                         <span className=" bg-leaf px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cream">
                           New
@@ -214,6 +219,7 @@ export default function Inquiries() {
             ))}
           </div>
         )}
+        {!loading && <Pagination page={currentPage} pageSize={pageSize} total={filteredInquiries.length} onChange={setPage} />}
       </main>
       </div>
       {deleting && <ConfirmDialog title="Delete inquiry?" description={`The message from ${deleting.name} will be permanently removed from your inbox.`} onClose={() => setDeleting(null)} onConfirm={handleDelete} />}

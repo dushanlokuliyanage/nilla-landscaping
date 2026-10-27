@@ -1,9 +1,8 @@
+import { imageFileSchema, imageUploadOptionsSchema, validationMessage, videoFileSchema } from "@/lib/validation";
+
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const VIDEO_PRESET = import.meta.env.VITE_CLOUDINARY_VIDEO_PRESET;
-
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
 
 export type ImageUploadOptions = {
   folder?: string;
@@ -15,17 +14,15 @@ export async function uploadImage(file: File, options: ImageUploadOptions = {}):
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error("Image upload is not set up yet (Cloudinary settings missing)");
   }
-  if (!file.type.startsWith("image/")) {
-    throw new Error(`${file.name} is not an image`);
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error(`${file.name} is larger than 10 MB`);
-  }
+  const validFile = imageFileSchema.safeParse(file);
+  if (!validFile.success) throw new Error(`${file.name}: ${validationMessage(validFile.error)}`);
+  const validOptions = imageUploadOptionsSchema.safeParse(options);
+  if (!validOptions.success) throw new Error(validationMessage(validOptions.error));
 
   const body = new FormData();
   body.append("file", file);
   body.append("upload_preset", UPLOAD_PRESET);
-  if (options.folder) body.append("folder", options.folder);
+  if (validOptions.data.folder) body.append("folder", validOptions.data.folder);
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
@@ -38,9 +35,9 @@ export async function uploadImage(file: File, options: ImageUploadOptions = {}):
   }
 
   const original = data.secure_url as string;
-  if (file.type === "image/gif" || options.scale === "original") return original;
-  const width = options.scale ?? 1200;
-  const autoSide = options.autoSide ?? "width";
+  if (file.type === "image/gif" || validOptions.data.scale === "original") return original;
+  const width = validOptions.data.scale ?? 1200;
+  const autoSide = validOptions.data.autoSide ?? "width";
   const resize = autoSide === "width" ? `w_${width}`
     : autoSide === "height" ? `h_${width}`
       : `w_${width},h_${width}`;
@@ -62,14 +59,8 @@ export function uploadVideo(
       reject(new Error("Video upload is not set up yet (Cloudinary video preset missing)"));
       return;
     }
-    if (!file.type.startsWith("video/")) {
-      reject(new Error(`${file.name} is not a video`));
-      return;
-    }
-    if (file.size > MAX_VIDEO_BYTES) {
-      reject(new Error("This video is larger than 40 MB. Compress it or use a shorter clip."));
-      return;
-    }
+    const validFile = videoFileSchema.safeParse(file);
+    if (!validFile.success) { reject(new Error(`${file.name}: ${validationMessage(validFile.error)}`)); return; }
 
     const body = new FormData();
     body.append("file", file);

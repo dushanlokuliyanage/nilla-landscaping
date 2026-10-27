@@ -13,12 +13,18 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 body {
   background: var(--color-cream);
   color: #1d2b20;
   font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: clip;
+}
+
+section[id] {
+  scroll-margin-top: 5rem;
 }
 
 ::selection {

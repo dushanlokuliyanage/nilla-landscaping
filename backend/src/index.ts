@@ -8,6 +8,7 @@ import { adminRoutes } from "./routes/admin.js";
 import type { Env } from "./types.js";
 import { galleryRoutes } from "./routes/gallery.js";
 import { videoRoutes } from "./routes/videos.js";
+import { quoteRoutes } from "./routes/quotes.js";
 
 
 const app = new Hono<{ Bindings: Env }>();
@@ -30,5 +31,6 @@ app.route("/api/orders", orderRoutes);
 app.route("/api/admin", adminRoutes);
 app.route("/api/gallery", galleryRoutes);
 app.route("/api/videos", videoRoutes);
+app.route("/api/quotes", quoteRoutes);
 
 export default app;

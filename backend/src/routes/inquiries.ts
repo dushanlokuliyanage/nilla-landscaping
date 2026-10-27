@@ -6,25 +6,26 @@ import { eq, desc } from "drizzle-orm";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../lib/logging.js";
 import { sendInquiryNotification, sendCustomerConfirmation } from "../lib/email.js";
+import { parsePositiveId, readJson } from "../lib/validation.js";
 import type { Env } from "../types.js";
 
 const inquirySchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  service: z.string().optional(),
-  message: z.string().min(5),
+  name: z.string().trim().min(2).max(120),
+  email: z.email().trim().max(254),
+  phone: z.string().trim().max(40).optional(),
+  service: z.string().trim().max(120).optional(),
+  message: z.string().trim().min(5).max(5000),
 });
 
 const followUpSchema = z.object({
   status: z.enum(["new", "contacted", "quoted", "won", "lost"]),
-  note: z.string().max(2000).nullable(),
+  note: z.string().trim().max(2000).nullable(),
 });
 
 export const inquiryRoutes = new Hono<{ Bindings: Env }>();
 
 inquiryRoutes.post("/", async (c) => {
-  const body = await c.req.json();
+  const body = await readJson(c.req.raw);
   const parsed = inquirySchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: parsed.error.flatten() }, 400);
@@ -51,16 +52,17 @@ inquiryRoutes.get("/", requireAuth, requirePermission("inquiries.read"), async (
 
 inquiryRoutes.patch("/:id/read", requireAuth, requirePermission("inquiries.manage"), async (c) => {
   const db = getDb(c.env.DATABASE_URL);
-  const id = Number(c.req.param("id"));
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid inquiry ID" }, 400);
   const [updated] = await db.update(inquiries).set({ isRead: true }).where(eq(inquiries.id, id)).returning({ id: inquiries.id });
   if (updated) await logActivity(c, "marked_read", "inquiry", id);
   return c.json({ success: true });
 });
 
 inquiryRoutes.patch("/:id/follow-up", requireAuth, requirePermission("inquiries.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  if (!Number.isInteger(id) || id < 1) return c.json({ error: "Invalid inquiry" }, 400);
-  const parsed = followUpSchema.safeParse(await c.req.json());
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid inquiry ID" }, 400);
+  const parsed = followUpSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: "Invalid follow-up details" }, 400);
 
   const [updated] = await getDb(c.env.DATABASE_URL)
@@ -75,7 +77,8 @@ inquiryRoutes.patch("/:id/follow-up", requireAuth, requirePermission("inquiries.
 
 inquiryRoutes.delete("/:id", requireAuth, requirePermission("inquiries.manage"), async (c) => {
   const db = getDb(c.env.DATABASE_URL);
-  const id = Number(c.req.param("id"));
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid inquiry ID" }, 400);
   const [deleted] = await db.delete(inquiries).where(eq(inquiries.id, id)).returning({ id: inquiries.id });
   if (deleted) await logActivity(c, "deleted", "inquiry", id);
   return c.json({ success: true });

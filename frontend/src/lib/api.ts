@@ -28,13 +28,23 @@ export type OrderInput = {
   customerName: string;
   phone: string;
   email?: string;
-  address?: string;
+  address: string;
   note?: string;
   items: {
     productId: number;
     quantity: number;
     options: Record<string, string>;
   }[];
+};
+
+export type QuoteService = "grass" | "interlock" | "plants" | "other";
+export type QuoteRequestInput = {
+  customerName: string;
+  email: string;
+  phone: string;
+  address?: string;
+  requestedServices: { service: QuoteService; description: string; quantity: number; unit: "sq ft" | "plant" | "job" }[];
+  message?: string;
 };
 
 // Turns the API's validation errors into one readable message
@@ -65,6 +75,16 @@ export async function submitInquiry(data: {
   });
   if (!res.ok) throw new Error(await parseError(res, "Failed to submit inquiry"));
   return res.json();
+}
+
+export async function submitQuoteRequest(data: QuoteRequestInput) {
+  const res = await fetch(`${API_URL}/api/quotes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Failed to send quote request"));
+  return res.json() as Promise<{ success: boolean; id: number; quoteNumber: number }>;
 }
 
 export async function getProducts(): Promise<Product[]> {

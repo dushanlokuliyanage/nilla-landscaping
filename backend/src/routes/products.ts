@@ -5,21 +5,22 @@ import { getDb } from "../db/index.js";
 import { products } from "../db/schema.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../lib/logging.js";
+import { parsePositiveId, readJson } from "../lib/validation.js";
 import type { Env } from "../types.js";
 
 const productSchema = z.object({
-  name: z.string().min(2),
-  description: z.string().default(""),
+  name: z.string().trim().min(2).max(160),
+  description: z.string().trim().max(5000).default(""),
   price: z.number().int().min(0),
-  unit: z.string().min(1).default("per kg"),
-  images: z.array(z.string().min(1)).default([]),
+  unit: z.string().trim().min(1).max(80).default("per kg"),
+  images: z.array(z.string().trim().min(1).max(2000)).max(30).default([]),
   options: z
     .array(
       z.object({
-        name: z.string().min(1),
-        values: z.array(z.string().min(1)).min(1),
-      })
-    )
+        name: z.string().trim().min(1).max(80),
+        values: z.array(z.string().trim().min(1).max(100)).min(1).max(50),
+      }).strict()
+    ).max(30)
     .default([]),
   stockQuantity: z.number().int().min(0).default(0),
 });
@@ -54,7 +55,7 @@ productRoutes.get("/:slug", async (c) => {
 
 // Admin: create
 productRoutes.post("/", requireAuth, requirePermission("products.manage"), async (c) => {
-  const parsed = productSchema.safeParse(await c.req.json());
+  const parsed = productSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -79,8 +80,9 @@ productRoutes.post("/", requireAuth, requirePermission("products.manage"), async
 
 // Admin: update (slug stays the same so links don't break)
 productRoutes.put("/:id", requireAuth, requirePermission("products.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
-  const parsed = productSchema.safeParse(await c.req.json());
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid product ID" }, 400);
+  const parsed = productSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
   const db = getDb(c.env.DATABASE_URL);
@@ -96,7 +98,8 @@ productRoutes.put("/:id", requireAuth, requirePermission("products.manage"), asy
 
 // Admin: delete
 productRoutes.delete("/:id", requireAuth, requirePermission("products.manage"), async (c) => {
-  const id = Number(c.req.param("id"));
+  const id = parsePositiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Invalid product ID" }, 400);
   const db = getDb(c.env.DATABASE_URL);
   const [deleted] = await db.delete(products).where(eq(products.id, id)).returning({ name: products.name });
   if (deleted) await logActivity(c, "deleted", "product", id, { name: deleted.name });

@@ -11,12 +11,12 @@ const services = [
 
 export default function Services() {
   return (
-    <section id="services" className="mx-auto max-w-6xl px-5 py-24">
+    <section id="services" className="mx-auto max-w-6xl px-4 py-16 sm:px-5 sm:py-20 lg:py-24">
       <div className="max-w-xl">
         <span className="text-sm font-medium uppercase tracking-[0.18em] text-leaf">
           What we do
         </span>
-        <h2 className="mt-3 font-display text-4xl font-semibold text-forest md:text-5xl">
+        <h2 className="mt-3 font-display text-3xl font-semibold text-forest sm:text-4xl md:text-5xl">
           Our Services
         </h2>
         <p className="mt-4 text-forest/70">
@@ -25,11 +25,11 @@ export default function Services() {
         </p>
       </div>
 
-      <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid gap-4 sm:mt-14 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
         {services.map(({ icon: Icon, title, desc }) => (
           <div
             key={title}
-            className="group  border border-forest/10 bg-white/60 p-7 transition hover:border-leaf/40 hover:bg-white"
+            className="group border border-forest/10 bg-white/60 p-5 transition hover:border-leaf/40 hover:bg-white sm:p-7"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sage/40 transition group-hover:bg-leaf group-hover:text-cream">
               <Icon className="h-6 w-6 text-forest transition group-hover:text-cream" />

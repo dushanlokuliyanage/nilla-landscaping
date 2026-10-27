@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { login } from "@/lib/api";
+import { loginSchema, validationMessage } from "@/lib/validation";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -13,10 +14,15 @@ export default function Login() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    const parsed = loginSchema.safeParse({ email: email.trim(), password });
+    if (!parsed.success) {
+      setError(validationMessage(parsed.error));
+      return;
+    }
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(parsed.data.email, parsed.data.password);
       navigate("/");
     } catch {
       setError("Invalid email or password");
@@ -36,6 +42,7 @@ export default function Login() {
         </div>
 
         <form
+          noValidate
           onSubmit={handleSubmit}
           className="  border border-forest/10 bg-white shadow-sm p-7"
         >
