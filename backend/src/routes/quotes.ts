@@ -8,9 +8,11 @@ import { logActivity } from "../lib/logging.js";
 import { sendCustomerQuote, sendQuoteReceivedConfirmation, sendQuoteRequestNotification } from "../lib/email.js";
 import { parsePositiveId, readJson } from "../lib/validation.js";
 import type { Env } from "../types.js";
+import { verifyTurnstile } from "../lib/turnstile.js";
 
 const services = ["grass", "interlock", "plants", "other"] as const;
 const requestSchema = z.object({
+  turnstileToken: z.string().min(1).max(2048),
   customerName: z.string().trim().min(2).max(120),
   email: z.email().trim().max(254),
   phone: z.string().trim().regex(/^[+()\d\s.-]{7,40}$/),
@@ -51,7 +53,9 @@ export const quoteRoutes = new Hono<{ Bindings: Env }>();
 quoteRoutes.post("/", async (c) => {
   const parsed = requestSchema.safeParse(await readJson(c.req.raw));
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
-  const [created] = await getDb(c.env.DATABASE_URL).insert(quoteRequests).values(parsed.data).returning();
+  if (!await verifyTurnstile(c, parsed.data.turnstileToken)) return c.json({ error: "Security check failed. Please try again." }, 403);
+  const { turnstileToken: _token, ...quoteRequest } = parsed.data;
+  const [created] = await getDb(c.env.DATABASE_URL).insert(quoteRequests).values(quoteRequest).returning();
   c.executionCtx.waitUntil(sendQuoteRequestNotification(created, c.env).catch(console.error));
   c.executionCtx.waitUntil(sendQuoteReceivedConfirmation(created, c.env).catch(console.error));
   return c.json({ success: true, id: created.id, quoteNumber: created.id + 1350 }, 201);

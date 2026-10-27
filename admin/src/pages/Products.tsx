@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, X, ImageOff, Upload } from "lucide-react";
-import AdminHeader from "@/components/AdminHeader";
-import NavTabs from "@/components/NavTabs";
 import MediaPicker from "@/components/MediaPicker";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Pagination, { PageSizeControl, usePageSize } from "@/components/Pagination";
 import { productFormSchema, validationMessage } from "@/lib/validation";
 import { uploadImage } from "@/lib/upload";
 import { saveMedia } from "@/lib/media";
@@ -107,6 +106,8 @@ export default function Products() {
   const [search, setSearch] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("name");
+  const [pageSize, setPageSize] = usePageSize();
+  const [page, setPage] = useState(1);
 
   async function load() {
     try {
@@ -128,6 +129,9 @@ export default function Products() {
       return matchesSearch && matchesStock;
     }).sort((a, b) => sortOrder === "price-low" ? a.price - b.price : sortOrder === "price-high" ? b.price - a.price : a.name.localeCompare(b.name));
   }, [products, search, stockFilter, sortOrder]);
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filteredProducts.length / pageSize)));
+  const pageProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => { setPage(1); }, [search, stockFilter, sortOrder, pageSize]);
 
   function openNew() {
     setForm(emptyForm);
@@ -217,11 +221,8 @@ export default function Products() {
 
   return (
     <div className="min-h-screen">
-      <AdminHeader />
-      <NavTabs />
-
-      <div className="ml-16 md:ml-56">
-      <main className="mx-auto max-w-5xl px-5 py-8">
+      <div className="admin-main">
+      <main className="mx-auto max-w-7xl px-5 py-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-leaf">Catalog</p>
@@ -229,6 +230,7 @@ export default function Products() {
             <p className="mt-1.5 text-sm text-forest/55">Manage the products available in your garden shop.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <PageSizeControl pageSize={pageSize} onChange={(size) => { setPageSize(size); setPage(1); }} />
             <ViewModeControl mode={viewMode} onChange={setViewMode} />
             <button onClick={openNew} className="flex items-center gap-2 bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf">
               <Plus className="h-4 w-4" />Add product
@@ -255,20 +257,20 @@ export default function Products() {
           <p className="border border-dashed border-forest/15 px-5 py-10 text-center text-forest/60">No products match these filters.</p>
         ) : (
           <div className={viewMode === "cards" ? "grid gap-5 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
-            {filteredProducts.map((p) => (
+            {pageProducts.map((p) => (
               <div
                 key={p.id}
                 className={`${viewMode === "list" ? "flex items-stretch" : "overflow-hidden"} border border-forest/10 bg-white shadow-sm`}
               >
                 {p.images[0] ? (
-                  <img src={p.images[0]} alt={p.name} className={viewMode === "list" ? "h-32 w-36 shrink-0 object-cover" : "h-40 w-full object-cover"} />
+                  <img src={p.images[0]} alt={p.name} className={viewMode === "list" ? "m-2 h-8 w-8 shrink-0 object-cover" : "h-40 w-full object-cover"} />
                 ) : (
-                  <div className={`flex items-center justify-center bg-sage/20 ${viewMode === "list" ? "h-32 w-36 shrink-0" : "h-40 w-full"}`}>
-                    <ImageOff className="h-8 w-8 text-forest/30" />
+                  <div className={`flex items-center justify-center bg-sage/20 ${viewMode === "list" ? "m-2 h-8 w-8 shrink-0" : "h-40 w-full"}`}>
+                    <ImageOff className={`${viewMode === "list" ? "h-4 w-4" : "h-8 w-8"} text-forest/30`} />
                   </div>
                 )}
 
-                <div className={`flex-1 p-4 ${viewMode === "list" ? "sm:flex sm:flex-col sm:justify-center" : ""}`}>
+                <div className={`min-w-0 flex-1 ${viewMode === "list" ? "flex flex-wrap items-center gap-x-5 gap-y-1 px-3 py-2" : "p-4"}`}>
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="min-w-0 break-words font-semibold text-forest">{p.name}</h3>
                     <span
@@ -280,16 +282,16 @@ export default function Products() {
                     </span>
                   </div>
 
-                  <p className="mt-1 text-sm text-forest/70">
+                  <p className={`${viewMode === "list" ? "" : "mt-1"} text-sm text-forest/70`}>
                     Rs. {p.price} {p.unit}
                   </p>
                   {p.options.length > 0 && (
-                    <p className="mt-1 text-xs text-forest/50">
+                    <p className={`${viewMode === "list" ? "" : "mt-1"} text-xs text-forest/50`}>
                       {p.options.map((o) => o.name).join(", ")}
                     </p>
                   )}
 
-                  <div className="mt-4 flex gap-2">
+                  <div className={`flex gap-2 ${viewMode === "list" ? "ml-auto" : "mt-4"}`}>
                     <button
                       onClick={() => openEdit(p)}
                       className="flex items-center gap-1.5  border border-forest/15 px-3.5 py-1.5 text-xs font-medium text-forest transition hover:bg-white"
@@ -310,6 +312,7 @@ export default function Products() {
             ))}
           </div>
         )}
+        {!loading && filteredProducts.length > 0 && <Pagination page={currentPage} pageSize={pageSize} total={filteredProducts.length} onChange={setPage} />}
       </main>
       </div>
 

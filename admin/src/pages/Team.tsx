@@ -1,6 +1,4 @@
 import { useEffect, useState, type FormEvent } from "react";
-import AdminHeader from "@/components/AdminHeader";
-import NavTabs from "@/components/NavTabs";
 import { createTeamMember, getRoles, getTeam, updateTeamRole, updateTeamStatus, type AdminAccount, type AdminRole } from "@/lib/api";
 import { teamAccountSchema, validationMessage } from "@/lib/validation";
 
@@ -27,7 +25,7 @@ export default function Team() {
   async function toggle(member: AdminAccount) {
     try { await updateTeamStatus(member.id, !member.isActive); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Unable to update account"); }
   }
-  return <div className="min-h-screen"><AdminHeader /><NavTabs /><div className="ml-16 md:ml-56">
+  return <div className="min-h-screen"><div className="admin-main">
       <main className="mx-auto max-w-6xl px-5 py-8">
     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-leaf">Workspace</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-forest">Team access</h1><p className="mt-1.5 text-sm text-forest/60">Create staff accounts and manage their access.</p>
     {error && <p role="alert" className="mt-4 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}

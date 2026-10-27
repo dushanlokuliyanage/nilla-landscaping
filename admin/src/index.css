@@ -22,6 +22,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.admin-main {
+  margin-left: 0;
+  transition: margin-left 200ms ease;
+}
+
+@media (min-width: 768px) {
+  .admin-main {
+    margin-left: var(--admin-sidebar-width, 14rem);
+  }
+}
+
 button,
 input,
 select,
@@ -69,10 +80,17 @@ a:focus-visible {
   body { min-width: 0; background: white; color: #111; }
   .report-page > header,
   .report-page > aside,
+  body:has(.report-page) .admin-header,
+  body:has(.report-page) .admin-sidebar,
   .report-controls,
   .report-screen-heading { display: none !important; }
   .report-page > div { margin: 0 !important; }
   .report-page main { max-width: none !important; padding: 0 !important; }
+  .report-content,
+  .report-content .overflow-x-auto { width: 100% !important; max-width: 100% !important; overflow: visible !important; }
+  .report-content table { width: 100% !important; min-width: 0 !important; table-layout: fixed; }
+  .report-content th,
+  .report-content td { overflow-wrap: anywhere; padding: 4px 3px !important; font-size: 8pt; }
   .report-content article,
   .report-content section > div { break-inside: avoid; box-shadow: none !important; }
   .report-content { color: #111; }

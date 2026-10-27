@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Download, Plus, Save, Send, Settings2, Trash2 } from "lucide-react";
-import AdminHeader from "@/components/AdminHeader";
-import NavTabs from "@/components/NavTabs";
 import { calculateQuoteDistance, getQuoteRates, getQuoteRequests, saveQuoteRates, saveQuotation, sendQuotation, updateQuoteStatus, type QuoteLine, type QuoteRate, type QuoteRequest } from "@/lib/api";
 
 const rateDefinitions: { key: QuoteRate["key"]; label: string; unit: string }[] = [
@@ -127,7 +125,7 @@ export default function Quotes() {
     finally { setSaving(false); }
   }
 
-  return <div className="min-h-screen quote-admin-page"><AdminHeader /><NavTabs /><div className="ml-16 md:ml-56"><main className="mx-auto max-w-7xl px-5 py-8">
+  return <div className="min-h-screen quote-admin-page"><div className="admin-main"><main className="mx-auto max-w-7xl px-5 py-8">
     <div className="mb-6"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-leaf">Sales workspace</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-forest">Generate Quote</h1><p className="mt-1.5 text-sm text-forest/60">Review customer requests, set your unit prices, and prepare a quotation for approval.</p></div>
     {error && <p role="alert" className="mb-4 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}{notice && <p role="status" className="mb-4 border border-leaf/20 bg-sage/15 p-3 text-sm text-forest">{notice}</p>}
 

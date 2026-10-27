@@ -4,6 +4,7 @@ import { useState } from "react";
 import { submitInquiry } from "@/lib/api";
 import { inquiryFormSchema, validationMessage } from "@/lib/validation";
 import { Send } from "lucide-react";
+import Turnstile from "@/components/Turnstile";
 
 const SERVICES = ["Lawn Care", "Garden Design", "Tree Trimming", "Irrigation", "Landscaping", "Maintenance", "Other"];
 
@@ -17,6 +18,8 @@ export default function ContactForm() {
   });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,15 +29,19 @@ export default function ContactForm() {
       setErrorMsg(validationMessage(parsed.error));
       return;
     }
+    if (!turnstileToken) { setStatus("error"); setErrorMsg("Please complete the security check."); return; }
     setStatus("loading");
     setErrorMsg("");
     try {
-      await submitInquiry(parsed.data);
+      await submitInquiry({ ...parsed.data, turnstileToken });
+      setTurnstileToken("");
       setStatus("success");
       setForm({ name: "", email: "", phone: "", service: SERVICES[0], message: "" });
     } catch (err) {
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong");
+      setTurnstileToken("");
+      setTurnstileKey((key) => key + 1);
     }
   }
 
@@ -114,6 +121,8 @@ export default function ContactForm() {
       </div>
 
       {status === "error" && <p className="text-sm text-red-600">{errorMsg}</p>}
+
+      <Turnstile key={turnstileKey} onToken={setTurnstileToken} />
 
       <button
         type="submit"

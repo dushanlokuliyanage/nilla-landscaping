@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { login } from "@/lib/api";
 import { loginSchema, validationMessage } from "@/lib/validation";
+import Turnstile from "@/components/Turnstile";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,6 +11,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,13 +22,16 @@ export default function Login() {
       setError(validationMessage(parsed.error));
       return;
     }
+    if (!turnstileToken) { setError("Please complete the security check."); return; }
     setLoading(true);
 
     try {
-      await login(parsed.data.email, parsed.data.password);
+      await login(parsed.data.email, parsed.data.password, turnstileToken);
       navigate("/");
     } catch {
       setError("Invalid email or password");
+      setTurnstileToken("");
+      setTurnstileKey((key) => key + 1);
     } finally {
       setLoading(false);
     }
@@ -66,6 +72,8 @@ export default function Login() {
           </div>
 
           {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+          <div className="mb-5"><Turnstile key={turnstileKey} onToken={setTurnstileToken} /></div>
 
           <button
             type="submit"

@@ -89,6 +89,9 @@ export type AdminRole = { key: string; name: string; description: string; isActi
 export type ActivityLog = { id: number; adminId: number | null; adminEmail: string; action: string; entity: string; entityId: string | null; details: Record<string, unknown>; createdAt: string };
 export type AccessLog = { id: number; adminId: number | null; email: string; event: string; ipAddress: string | null; userAgent: string | null; createdAt: string };
 
+export type BackupDatasetName = "products" | "gallery" | "videos" | "inquiries" | "quotes" | "orders" | "logs";
+export type SystemBackup = { application: "nilla-garden"; backupVersion: 1; createdAt: string; filters?: { from: string | null; to: string | null }; datasets: Record<string, unknown> };
+
 function getToken() {
   return localStorage.getItem("admin_token");
 }
@@ -123,10 +126,10 @@ async function request(path: string, options: RequestInit = {}) {
 }
 
 // ---- auth ----
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string, turnstileToken: string) {
   const data = await request("/api/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, turnstileToken }),
   });
   localStorage.setItem("admin_token", data.token);
   return data;
@@ -343,4 +346,15 @@ export async function reorderVideos(ids: number[]) {
 
 export async function deleteVideo(id: number) {
   return request(`/api/videos/${id}`, { method: "DELETE" });
+}
+
+export function createSystemBackup(options: { datasets: BackupDatasetName[]; from?: string; to?: string }): Promise<SystemBackup> {
+  const params = new URLSearchParams({ datasets: options.datasets.join(",") });
+  if (options.from) params.set("from", options.from);
+  if (options.to) params.set("to", options.to);
+  return request(`/api/admin/backup?${params.toString()}`);
+}
+
+export function restoreSystemBackup(backup: SystemBackup, datasets: BackupDatasetName[]) {
+  return request("/api/admin/backup/restore", { method: "POST", body: JSON.stringify({ backup, datasets, replace: true }) });
 }

@@ -11,11 +11,10 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import AdminHeader from "@/components/AdminHeader";
-import NavTabs from "@/components/NavTabs";
 import MediaPicker from "@/components/MediaPicker";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Pagination, { PageSizeControl, usePageSize } from "@/components/Pagination";
 import { videoFormSchema, validationMessage } from "@/lib/validation";
 import { uploadVideo } from "@/lib/upload";
 import { saveMedia } from "@/lib/media";
@@ -102,6 +101,8 @@ export default function Videos() {
   const [viewMode, setViewMode] = useViewMode("videos");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize();
 
   async function load() {
     try {
@@ -116,6 +117,11 @@ export default function Videos() {
   useEffect(() => {
     load();
   }, []);
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(items.length / pageSize)));
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageItems = items.slice(startIndex, startIndex + pageSize);
+  useEffect(() => { setPage(1); }, [pageSize]);
 
   async function run(action: () => Promise<void>) {
     setPageError("");
@@ -223,10 +229,7 @@ export default function Videos() {
 
   return (
     <div className="min-h-screen">
-      <AdminHeader />
-      <NavTabs />
-
-      <div className="ml-16 md:ml-56">
+      <div className="admin-main">
       <main className="mx-auto max-w-5xl px-5 py-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -235,6 +238,7 @@ export default function Videos() {
             <p className="mt-1.5 text-sm text-forest/55">Manage videos featured on the garden website.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <PageSizeControl pageSize={pageSize} onChange={setPageSize} />
             <ViewModeControl mode={viewMode} onChange={setViewMode} />
             <button onClick={openNew} className="flex items-center gap-2 bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf">
               <Plus className="h-4 w-4" />Add video
@@ -254,7 +258,9 @@ export default function Videos() {
           <p className="text-forest/60">No videos yet. Add your first one.</p>
         ) : (
           <div className={viewMode === "cards" ? "grid gap-5 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
-            {items.map((v, index) => (
+            {pageItems.map((v, offset) => {
+              const index = startIndex + offset;
+              return (
               <div
                 key={v.id}
                 className={`${viewMode === "list" ? "flex items-stretch" : "overflow-hidden"} border border-forest/10 bg-white shadow-sm ${
@@ -262,27 +268,27 @@ export default function Videos() {
                 }`}
               >
                 {v.posterUrl ? (
-                  <img src={v.posterUrl} alt={v.title} className={viewMode === "list" ? "h-32 w-36 shrink-0 object-cover" : "h-48 w-full object-cover"} />
+                  <img src={v.posterUrl} alt={v.title} className={viewMode === "list" ? "m-2 h-14 w-14 shrink-0 object-cover" : "h-56 w-full object-cover"} />
                 ) : (
-                  <div className={`flex items-center justify-center bg-sage/20 ${viewMode === "list" ? "h-32 w-36 shrink-0" : "h-48 w-full"}`}>
-                    <ImageOff className="h-8 w-8 text-forest/30" />
+                  <div className={`flex items-center justify-center bg-sage/20 ${viewMode === "list" ? "m-2 h-14 w-14 shrink-0" : "h-56 w-full"}`}>
+                    <ImageOff className={`${viewMode === "list" ? "h-5 w-5" : "h-8 w-8"} text-forest/30`} />
                   </div>
                 )}
 
-                <div className={`flex-1 p-4 ${viewMode === "list" ? "sm:flex sm:flex-col sm:justify-center" : ""}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="min-w-0 break-words font-semibold text-forest">{v.title}</h3>
+                <div className={`min-w-0 flex-1 ${viewMode === "list" ? "flex flex-wrap items-center gap-x-5 gap-y-1 px-3 py-2" : "p-4"}`}>
+                  <div className={`flex min-w-0 items-start justify-between gap-2 ${viewMode === "list" ? "flex-1" : ""}`}>
+                    <h3 className={`min-w-0 font-semibold text-forest ${viewMode === "list" ? "flex-1 truncate" : "break-words"}`} title={v.title}>{v.title}</h3>
                     <span
-                      className={`shrink-0  px-2.5 py-0.5 text-xs ${
+                      className={`${viewMode === "list" ? "hidden" : ""} shrink-0 px-2.5 py-0.5 text-xs ${
                         v.isPublished ? "bg-sage/40 text-forest" : "bg-forest/10 text-forest/70"
                       }`}
                     >
                       {v.isPublished ? "Published" : "Hidden"}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-forest/70">{v.category}</p>
+                  {viewMode === "cards" && <p className="mt-1 text-sm text-forest/70">{v.category}</p>}
 
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <div className={`flex flex-wrap items-center gap-2 ${viewMode === "list" ? "ml-auto" : "mt-4"}`}>
                     <button
                       onClick={() => move(index, -1)}
                       disabled={index === 0}
@@ -327,9 +333,10 @@ export default function Videos() {
                   </div>
                 </div>
               </div>
-            ))}
+            );})}
           </div>
         )}
+        {!loading && items.length > 0 && <Pagination page={currentPage} pageSize={pageSize} total={items.length} onChange={setPage} />}
       </main>
       </div>
 

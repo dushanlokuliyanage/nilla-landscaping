@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Inbox, ShoppingBag, TrendingUp, Clock } from "lucide-react";
 import { getCurrentAdmin, getInquiries, getOrders, type Inquiry, type Order } from "@/lib/api";
-import NavTabs from "@/components/NavTabs";
-import AdminHeader from "@/components/AdminHeader";
 
 type ReportPeriod = "7" | "30" | "all";
 const money = new Intl.NumberFormat("en-LK", { style: "currency", currency: "LKR", maximumFractionDigits: 0 });
@@ -29,7 +27,6 @@ export default function Dashboard() {
       setOrders(orderData);
     }).catch(() => { setInquiries([]); setOrders([]); }).finally(() => setLoading(false));
   }, []);
-  const unreadCount = inquiries.filter((inquiry) => !inquiry.isRead).length;
 
   const report = useMemo(() => {
     const now = Date.now();
@@ -72,9 +69,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <AdminHeader unreadCount={unreadCount} />
-      <NavTabs />
-      <div className="ml-16 md:ml-56">
+      <div className="admin-main">
       <main className="mx-auto max-w-6xl px-5 py-8">
         {loading ? <p className="text-forest/60">Loading overview...</p> : null}
         <section aria-label="Business report" className="mb-10 space-y-5">

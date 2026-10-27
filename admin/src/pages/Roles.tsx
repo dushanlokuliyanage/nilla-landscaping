@@ -1,22 +1,21 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { KeyRound, Pencil, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
-import AdminHeader from "@/components/AdminHeader";
-import NavTabs from "@/components/NavTabs";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import Pagination from "@/components/Pagination";
+import Pagination, { PageSizeControl, usePageSize } from "@/components/Pagination";
 import { createRole, deleteRole, getRoles, updateRole, type AdminRole } from "@/lib/api";
 import { roleFormSchema, validationMessage } from "@/lib/validation";
 
 type RoleDraft = { key: string; name: string; description: string; isActive: boolean; permissions: string[] };
-const permissionRows: { label: string; note: string; actions: Partial<Record<"create" | "read" | "update" | "delete", string>> }[] = [
+const permissionRows: { label: string; note: string; actions: Partial<Record<"create" | "read" | "update" | "delete" | "manage", string>> }[] = [
   { label: "Inquiries", note: "View, respond to, and remove customer inquiries", actions: { read: "inquiries.read", update: "inquiries.update", delete: "inquiries.delete" } },
   { label: "Products & content", note: "Products, gallery, videos, and media library", actions: { create: "products.create", read: "products.read", update: "products.update", delete: "products.delete" } },
   { label: "Orders", note: "View, update, and remove customer orders", actions: { read: "orders.read", update: "orders.update", delete: "orders.delete" } },
   { label: "Team accounts", note: "Create accounts, change roles, and deactivate access", actions: { create: "team.create", read: "team.read", update: "team.update", delete: "team.delete" } },
   { label: "Role settings", note: "Create, edit, and remove roles and permissions", actions: { create: "roles.create", read: "roles.read", update: "roles.update", delete: "roles.delete" } },
   { label: "Activity & access logs", note: "Review admin actions and sign-in history", actions: { read: "logs.read" } },
+  { label: "Backup & restore", note: "Export system data and replace selected records from a backup", actions: { manage: "backup.manage" } },
 ];
-const permissionActions = ["create", "read", "update", "delete"] as const;
+const permissionActions = ["create", "read", "update", "delete", "manage"] as const;
 const templates = [
   { label: "Content editor", permissions: ["products.manage"] },
   { label: "Customer support", permissions: ["inquiries.read", "inquiries.manage", "orders.read"] },
@@ -35,7 +34,7 @@ export default function Roles() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = usePageSize();
   async function load() {
     setLoading(true);
     try { setRoles(await getRoles()); setError(""); }
@@ -49,6 +48,7 @@ export default function Roles() {
   ), [roles, query, statusFilter]);
   const currentPage = Math.min(page, Math.max(1, Math.ceil(visibleRoles.length / pageSize)));
   const pageRoles = visibleRoles.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => { setPage(1); }, [query, statusFilter, pageSize]);
   function edit(role?: AdminRole) {
     setEditingKey(role?.key ?? null);
     setDraft(role ? { key: role.key, name: role.name, description: role.description, isActive: role.isActive, permissions: role.permissions } : emptyDraft());
@@ -73,11 +73,11 @@ export default function Roles() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save role"); }
     finally { setSaving(false); }
   }
-  return <div className="min-h-screen"><AdminHeader /><NavTabs /><div className="ml-16 md:ml-56">
+  return <div className="min-h-screen"><div className="admin-main">
     <main className="mx-auto max-w-6xl px-5 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-leaf">Workspace</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-forest">Roles &amp; permissions</h1><p className="mt-1.5 text-sm text-forest/60">Choose what each role can view and manage across the admin panel.</p></div>
-        <button onClick={() => edit()} className="flex items-center gap-2 bg-forest px-4 py-2.5 text-sm font-medium text-cream hover:bg-leaf"><Plus className="h-4 w-4" /> Add role</button>
+        <div className="flex flex-wrap items-center gap-2"><PageSizeControl pageSize={pageSize} onChange={setPageSize} /><button onClick={() => edit()} className="flex items-center gap-2 bg-forest px-4 py-2.5 text-sm font-medium text-cream hover:bg-leaf"><Plus className="h-4 w-4" /> Add role</button></div>
       </div>
       {error && !draft && <p role="alert" className="mt-5 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <section className="mt-6 border border-forest/10 bg-white p-5 shadow-sm">

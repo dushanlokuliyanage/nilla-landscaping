@@ -3,6 +3,14 @@ main = "src/index.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "82641001"
+
+  [ratelimits.simple]
+  limit = 300
+  period = 60
+
 [vars]
 ADMIN_EMAIL = "dmlliyanage@gmail.com"
 FRONTEND_URL = "https://nilla-garden-site.nilla-garden.workers.dev,https://nilla-garden-admin.nilla-garden.workers.dev,http://localhost:3000,http://localhost:5173"

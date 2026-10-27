@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import AdminHeader from "@/components/AdminHeader";
-import NavTabs from "@/components/NavTabs";
 import { getAccessLogs, getActivityLogs, type AccessLog, type ActivityLog } from "@/lib/api";
 
 export default function Logs({ kind }: { kind: "activity" | "access" }) {
@@ -10,7 +8,7 @@ export default function Logs({ kind }: { kind: "activity" | "access" }) {
   useEffect(() => {
     (kind === "activity" ? getActivityLogs().then(setActivity) : getAccessLogs().then(setAccess)).catch(e => setError(e instanceof Error ? e.message : "Unable to load log"));
   }, [kind]);
-  return <div className="min-h-screen"><AdminHeader /><NavTabs /><div className="ml-16 md:ml-56">
+  return <div className="min-h-screen"><div className="admin-main">
       <main className="mx-auto max-w-6xl px-5 py-8">
     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-leaf">Workspace</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-forest">{kind === "activity" ? "Activity log" : "Access log"}</h1><p className="mt-1.5 text-sm text-forest/60">Showing the latest 200 records.</p>
     {error ? <p role="alert" className="mt-5 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : <div className="mt-6 overflow-x-auto border border-forest/10 bg-white shadow-sm"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-forest/10 bg-sage/20 text-forest/70"><tr>{kind === "activity" ? <><th className="p-3">When</th><th className="p-3">Admin</th><th className="p-3">Action</th><th className="p-3">Record</th><th className="p-3">Details</th></> : <><th className="p-3">When</th><th className="p-3">Email</th><th className="p-3">Event</th><th className="p-3">IP address</th><th className="p-3">Browser</th></>}</tr></thead><tbody>

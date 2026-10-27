@@ -22,6 +22,18 @@ app.use("/*", async (c, next) => {
   return corsMiddleware(c, next);
 });
 
+app.use("/*", async (c, next) => {
+  const clientIp = c.req.header("CF-Connecting-IP") ?? "unknown";
+  const { success } = await c.env.RATE_LIMITER.limit({ key: clientIp });
+
+  if (!success) {
+    c.header("Retry-After", "60");
+    return c.json({ error: "Too many requests. Please try again in a minute." }, 429);
+  }
+
+  return next();
+});
+
 app.get("/", (c) => c.json({ status: "ok", service: "Nilla Garden API" }));
 
 app.route("/api/inquiries", inquiryRoutes);

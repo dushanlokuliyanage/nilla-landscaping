@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Phone, Mail, MapPin, Trash2 } from "lucide-react";
-import AdminHeader from "@/components/AdminHeader";
-import NavTabs from "@/components/NavTabs";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import Pagination from "@/components/Pagination";
+import Pagination, { PageSizeControl, usePageSize } from "@/components/Pagination";
 import {
   getOrders,
   updateOrderStatus,
@@ -31,7 +29,7 @@ export default function Orders() {
   const [viewMode, setViewMode] = useViewMode("orders");
   const [canManage, setCanManage] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = usePageSize();
 
   useEffect(() => {
     getOrders()
@@ -59,13 +57,11 @@ export default function Orders() {
   );
   const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / pageSize)));
   const pageOrders = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => { setPage(1); }, [filter, pageSize]);
 
   return (
     <div className="min-h-screen">
-      <AdminHeader />
-      <NavTabs />
-
-      <div className="ml-16 md:ml-56">
+      <div className="admin-main">
       <main className="mx-auto max-w-5xl px-5 py-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -76,6 +72,7 @@ export default function Orders() {
 
           <div className="flex flex-wrap items-center gap-2">
           <ViewModeControl mode={viewMode} onChange={setViewMode} />
+          <PageSizeControl pageSize={pageSize} onChange={setPageSize} />
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as "all" | OrderStatus)}

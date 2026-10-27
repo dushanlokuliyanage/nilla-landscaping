@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { accessLogs, activityLogs, admins, adminRoles } from "../db/schema.js";
+import { accessLogs, activityLogs, admins, adminRoles, galleryProjects, inquiries, orders, products, quoteRates, quoteRequests, videos } from "../db/schema.js";
 import { requireAuth, requirePermission, requireAnyPermission } from "../middleware/auth.js";
 import { logActivity } from "../lib/logging.js";
 import { hashPassword } from "../lib/auth.js";
@@ -11,6 +11,78 @@ import type { Env } from "../types.js";
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 adminRoutes.use("*", requireAuth);
+
+const backupDatasetNames = ["products", "gallery", "videos", "inquiries", "quotes", "orders", "logs"] as const;
+type BackupDataset = typeof backupDatasetNames[number];
+const isBackupDataset = (value: unknown): value is BackupDataset => typeof value === "string" && backupDatasetNames.includes(value as BackupDataset);
+async function resetBackupSequence(db: ReturnType<typeof getDb>, table: "products" | "gallery_projects" | "videos" | "inquiries" | "quote_requests" | "orders" | "activity_logs" | "access_logs") {
+  await db.execute(sql.raw(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 1), EXISTS (SELECT 1 FROM "${table}"))`));
+}
+
+adminRoutes.get("/backup", requirePermission("backup.manage"), async (c) => {
+  const db = getDb(c.env.DATABASE_URL);
+  const rawDatasets = c.req.query("datasets");
+  const requested = rawDatasets?.split(",").filter(isBackupDataset);
+  if (rawDatasets && !requested?.length) return c.json({ error: "Select valid backup data sets" }, 400);
+  const selected = requested?.length ? [...new Set(requested)] : [...backupDatasetNames];
+  const from = c.req.query("from") ? new Date(`${c.req.query("from")}T00:00:00.000Z`) : null;
+  const to = c.req.query("to") ? new Date(`${c.req.query("to")}T23:59:59.999Z`) : null;
+  if ((from && Number.isNaN(from.getTime())) || (to && Number.isNaN(to.getTime())) || (from && to && from > to)) return c.json({ error: "Choose a valid date range" }, 400);
+  const datasets: Record<string, unknown> = {};
+  const inRange = <T extends { createdAt: Date | string }>(rows: T[]) => rows.filter((row) => {
+    const date = new Date(row.createdAt).getTime();
+    return (!from || date >= from.getTime()) && (!to || date <= to.getTime());
+  });
+  for (const name of selected) {
+    if (name === "products") datasets.products = await db.select().from(products);
+    if (name === "gallery") datasets.gallery = inRange(await db.select().from(galleryProjects));
+    if (name === "videos") datasets.videos = inRange(await db.select().from(videos));
+    if (name === "inquiries") datasets.inquiries = inRange(await db.select().from(inquiries));
+    if (name === "quotes") datasets.quotes = inRange(await db.select().from(quoteRequests));
+    if (name === "orders") datasets.orders = inRange(await db.select().from(orders));
+    if (name === "logs") datasets.logs = {
+      activity: inRange(await db.select().from(activityLogs)),
+      access: inRange(await db.select().from(accessLogs)),
+    };
+  }
+  if (selected.includes("quotes")) datasets.quoteRates = await db.select().from(quoteRates);
+  return c.json({ application: "nilla-garden", backupVersion: 1, createdAt: new Date().toISOString(), filters: { from: from?.toISOString() ?? null, to: to?.toISOString() ?? null }, datasets });
+});
+
+adminRoutes.post("/backup/restore", requirePermission("backup.manage"), async (c) => {
+  const body = await c.req.json().catch(() => null) as { backup?: { application?: string; backupVersion?: number; filters?: { from?: string | null; to?: string | null }; datasets?: Record<string, unknown> }; datasets?: unknown; replace?: boolean } | null;
+  const names = Array.isArray(body?.datasets) ? body.datasets.filter(isBackupDataset) : [];
+  const backup = body?.backup;
+  if (!backup || backup.application !== "nilla-garden" || backup.backupVersion !== 1 || !backup.datasets || !names.length || body?.replace !== true) return c.json({ error: "Invalid backup or restore selection" }, 400);
+  if (backup.filters?.from || backup.filters?.to) return c.json({ error: "A date-filtered export cannot replace a full data set. Restore from an export without date filters." }, 400);
+  for (const name of names) {
+    const rows = name === "logs" ? (backup.datasets.logs as { activity?: unknown; access?: unknown } | undefined) : backup.datasets[name];
+    const validRows = name === "logs" ? rows && typeof rows === "object" && Array.isArray((rows as { activity?: unknown }).activity) && Array.isArray((rows as { access?: unknown }).access) : Array.isArray(rows);
+    if (!validRows || (name !== "logs" && (rows as unknown[]).some((row) => !row || typeof row !== "object"))) return c.json({ error: `Backup is missing valid ${name} data` }, 400);
+  }
+  if (names.includes("quotes") && !Array.isArray(backup.datasets.quoteRates)) return c.json({ error: "Backup is missing valid quote pricing data" }, 400);
+  const db = getDb(c.env.DATABASE_URL);
+  for (const name of names) {
+    if (name === "products") { await db.delete(products); const rows = backup.datasets.products as typeof products.$inferInsert[]; if (rows.length) await db.insert(products).values(rows); await resetBackupSequence(db, "products"); }
+    if (name === "gallery") { await db.delete(galleryProjects); const rows = backup.datasets.gallery as typeof galleryProjects.$inferInsert[]; if (rows.length) await db.insert(galleryProjects).values(rows); await resetBackupSequence(db, "gallery_projects"); }
+    if (name === "videos") { await db.delete(videos); const rows = backup.datasets.videos as typeof videos.$inferInsert[]; if (rows.length) await db.insert(videos).values(rows); await resetBackupSequence(db, "videos"); }
+    if (name === "inquiries") { await db.delete(inquiries); const rows = backup.datasets.inquiries as typeof inquiries.$inferInsert[]; if (rows.length) await db.insert(inquiries).values(rows); await resetBackupSequence(db, "inquiries"); }
+    if (name === "quotes") {
+      await db.delete(quoteRequests); const quoteRows = backup.datasets.quotes as typeof quoteRequests.$inferInsert[]; if (quoteRows.length) await db.insert(quoteRequests).values(quoteRows);
+      await db.delete(quoteRates); const rateRows = backup.datasets.quoteRates as typeof quoteRates.$inferInsert[]; if (rateRows.length) await db.insert(quoteRates).values(rateRows);
+      await resetBackupSequence(db, "quote_requests");
+    }
+    if (name === "orders") { await db.delete(orders); const rows = backup.datasets.orders as typeof orders.$inferInsert[]; if (rows.length) await db.insert(orders).values(rows); await resetBackupSequence(db, "orders"); }
+    if (name === "logs") {
+      const logRows = backup.datasets.logs as { activity: typeof activityLogs.$inferInsert[]; access: typeof accessLogs.$inferInsert[] };
+      await db.delete(activityLogs); if (logRows.activity.length) await db.insert(activityLogs).values(logRows.activity);
+      await db.delete(accessLogs); if (logRows.access.length) await db.insert(accessLogs).values(logRows.access);
+      await resetBackupSequence(db, "activity_logs"); await resetBackupSequence(db, "access_logs");
+    }
+  }
+  await logActivity(c, "restored", "backup", null, { datasets: names });
+  return c.json({ success: true, restored: names });
+});
 
 const accountSchema = z.object({
   email: z.email().trim().max(254),

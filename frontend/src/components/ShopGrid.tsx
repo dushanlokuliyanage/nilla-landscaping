@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getProducts, type Product } from "@/lib/api";
 import ProductCard from "@/components/ProductCard";
-import Pagination from "@/components/Pagination";
 
 export default function ShopGrid() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -11,8 +10,7 @@ export default function ShopGrid() {
   const [search, setSearch] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("name");
-  const [page, setPage] = useState(1);
-  const pageSize = 6;
+  const [visibleCount, setVisibleCount] = useState(6);
 
   useEffect(() => {
     getProducts()
@@ -31,8 +29,7 @@ export default function ShopGrid() {
       return matchesSearch && matchesStock;
     }).sort((a, b) => sortOrder === "price-low" ? a.price - b.price : sortOrder === "price-high" ? b.price - a.price : a.name.localeCompare(b.name));
   }, [products, search, stockFilter, sortOrder]);
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(visibleProducts.length / pageSize)));
-  const pageProducts = visibleProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const displayedProducts = visibleProducts.slice(0, visibleCount);
 
   if (status === "loading") return <p className="text-forest/60">Loading products...</p>;
   if (status === "error")
@@ -51,11 +48,19 @@ export default function ShopGrid() {
         <select id="shop-sort" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} className="border border-forest/15 bg-white px-3.5 py-3 text-sm text-forest"><option value="name">Name</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select>
       </div>
       {visibleProducts.length === 0 ? <p className="border border-dashed border-forest/15 px-5 py-10 text-center text-forest/60">No products match your filters.</p> : <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {pageProducts.map((p) => (
+      {displayedProducts.map((p) => (
         <ProductCard key={p.id} product={p} />
       ))}
       </div>}
-      <Pagination page={currentPage} pageSize={pageSize} total={visibleProducts.length} onChange={setPage} />
+      {visibleProducts.length > 6 && (
+        <div className="mt-8 flex justify-center border-t border-forest/10 pt-6">
+          {displayedProducts.length < visibleProducts.length && (
+            <button type="button" onClick={() => setVisibleCount((count) => count + 6)} className="border border-forest/20 bg-white px-6 py-3 text-sm font-medium text-forest transition hover:border-forest hover:bg-sage/20">
+              See more products
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

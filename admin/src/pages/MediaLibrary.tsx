@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FolderUp, Image as ImageIcon, LoaderCircle, Upload, Video, X } from "lucide-react";
-import AdminHeader from "@/components/AdminHeader";
-import NavTabs from "@/components/NavTabs";
 import ViewModeControl, { useViewMode } from "@/components/ViewModeControl";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Pagination, { PageSizeControl, usePageSize } from "@/components/Pagination";
 import { getAllGalleryProjects, getAllVideos, getProducts } from "@/lib/api";
 import { getSavedMedia, mergeMedia, removeMediaFromLibrary, saveMedia, type MediaAsset } from "@/lib/media";
 import { uploadImage, uploadVideo } from "@/lib/upload";
@@ -20,6 +19,8 @@ export default function MediaLibrary() {
   const [uploadStatus, setUploadStatus] = useState("");
   const [error, setError] = useState("");
   const [viewMode, setViewMode] = useViewMode("media");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize();
   const [deleting, setDeleting] = useState<MediaAsset | null>(null);
   const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
@@ -104,6 +105,9 @@ export default function MediaLibrary() {
       return (kindFilter === "all" || asset.kind === kindFilter) && (!query || filename.toLowerCase().includes(query) || asset.url.toLowerCase().includes(query));
     });
   }, [assets, search, kindFilter]);
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filteredAssets.length / pageSize)));
+  const pageAssets = filteredAssets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => { setPage(1); }, [search, kindFilter, pageSize]);
 
   function handleDeleteMedia() {
     if (!deleting) return;
@@ -114,9 +118,7 @@ export default function MediaLibrary() {
 
   return (
     <div className="min-h-screen">
-      <AdminHeader />
-      <NavTabs />
-      <div className="ml-16 md:ml-56">
+      <div className="admin-main">
         <main className="mx-auto max-w-6xl px-5 py-8">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -125,6 +127,7 @@ export default function MediaLibrary() {
               <p className="mt-1.5 text-sm text-forest/55">Images and videos used across your products, gallery, and video pages.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <PageSizeControl pageSize={pageSize} onChange={setPageSize} />
               <ViewModeControl mode={viewMode} onChange={setViewMode} />
               <button type="button" onClick={() => { setError(""); setShowUploader(true); }} className="flex items-center gap-2 bg-forest px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-leaf">
                 <Upload className="h-4 w-4" />Upload media
@@ -161,10 +164,10 @@ export default function MediaLibrary() {
             <p className="border border-dashed border-forest/20 bg-white/60 px-5 py-10 text-center text-sm text-forest/60">No media matches these filters.</p>
           ) : (
             <div className={viewMode === "cards" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "flex flex-col gap-3"}>
-              {filteredAssets.map((asset) => (
+              {pageAssets.map((asset) => (
                 <article key={`${asset.kind}:${asset.url}`} className={`${viewMode === "list" ? "flex items-stretch" : "overflow-hidden"} border border-forest/10 bg-white shadow-sm`}>
-                  {asset.kind === "image" ? <img src={asset.url} alt="" className={viewMode === "list" ? "h-24 w-36 shrink-0 object-cover" : "h-44 w-full object-cover"} /> : (
-                    <div className={`relative bg-forest/10 ${viewMode === "list" ? "h-24 w-36 shrink-0" : "h-44"}`}>
+                  {asset.kind === "image" ? <img src={asset.url} alt="" className={viewMode === "list" ? "m-2 h-8 w-8 shrink-0 object-cover" : "h-44 w-full object-cover"} /> : (
+                    <div className={`relative bg-forest/10 ${viewMode === "list" ? "m-2 h-8 w-8 shrink-0" : "h-44"}`}>
                       {asset.posterUrl && <img src={asset.posterUrl} alt="" className="h-full w-full object-cover" />}
                       <div className="absolute inset-0 flex items-center justify-center bg-forest/20 text-white"><Video className="h-9 w-9" /></div>
                     </div>
@@ -180,6 +183,7 @@ export default function MediaLibrary() {
               ))}
             </div>
           )}
+          {!loading && filteredAssets.length > 0 && <Pagination page={currentPage} pageSize={pageSize} total={filteredAssets.length} onChange={setPage} />}
         </main>
       </div>
       {showUploader && (

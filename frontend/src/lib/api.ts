@@ -39,6 +39,7 @@ export type OrderInput = {
 
 export type QuoteService = "grass" | "interlock" | "plants" | "other";
 export type QuoteRequestInput = {
+  turnstileToken: string;
   customerName: string;
   email: string;
   phone: string;
@@ -62,6 +63,7 @@ async function parseError(res: Response, fallback: string) {
 }
 
 export async function submitInquiry(data: {
+  turnstileToken: string;
   name: string;
   email: string;
   phone?: string;

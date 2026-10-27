@@ -8,8 +8,10 @@ import { logAccess } from "../lib/logging.js";
 import { readJson } from "../lib/validation.js";
 import { requireAuth } from "../middleware/auth.js";
 import type { Env } from "../types.js";
+import { verifyTurnstile } from "../lib/turnstile.js";
 
 const loginSchema = z.object({
+  turnstileToken: z.string().min(1).max(2048),
   email: z.email().trim().max(254),
   password: z.string().min(6).max(128),
 });
@@ -20,6 +22,7 @@ authRoutes.post("/login", async (c) => {
   const body = await readJson(c.req.raw);
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+  if (!await verifyTurnstile(c, parsed.data.turnstileToken)) return c.json({ error: "Security check failed. Please try again." }, 403);
 
   const db = getDb(c.env.DATABASE_URL);
   const [admin] = await db.select().from(admins).where(eq(admins.email, parsed.data.email));

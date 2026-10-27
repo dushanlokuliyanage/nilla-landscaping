@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { submitQuoteRequest, type QuoteRequestInput, type QuoteService } from "@/lib/api";
+import Turnstile from "@/components/Turnstile";
 
 const inputClass = "w-full border border-forest/15 bg-white px-4 py-3 text-sm text-forest placeholder:text-forest/40 outline-none transition focus:border-leaf focus:ring-2 focus:ring-leaf/20";
 const serviceOptions: { key: QuoteService; label: string; detail: string }[] = [
@@ -24,6 +25,8 @@ export default function QuoteRequestForm() {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   function toggleService(key: QuoteService) {
     setSelected((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
@@ -35,6 +38,7 @@ export default function QuoteRequestForm() {
       setStatus("error"); setError("Enter your name, a valid email and phone number, and the project location."); return;
     }
     if (!selected.length) { setStatus("error"); setError("Choose at least one type of work."); return; }
+    if (!turnstileToken) { setStatus("error"); setError("Please complete the security check."); return; }
     const requestedServices: QuoteRequestInput["requestedServices"] = [];
     for (const key of selected) {
       const qty = key === "other" ? 1 : Number(areas[key]);
@@ -53,10 +57,10 @@ export default function QuoteRequestForm() {
     }
     setStatus("sending"); setError("");
     try {
-      await submitQuoteRequest({ customerName, email, phone, address, requestedServices, message });
+      await submitQuoteRequest({ customerName, email, phone, address, requestedServices, message, turnstileToken });
       setStatus("sent");
     } catch (reason) {
-      setStatus("error"); setError(reason instanceof Error ? reason.message : "Could not send your quote request. Please try again.");
+      setStatus("error"); setError(reason instanceof Error ? reason.message : "Could not send your quote request. Please try again."); setTurnstileToken(""); setTurnstileKey((key) => key + 1);
     }
   }
 
@@ -76,6 +80,7 @@ export default function QuoteRequestForm() {
       </div>
     </section>
     <section><label className="text-sm font-medium text-forest">Anything else we should know?<textarea rows={4} maxLength={5000} value={message} onChange={(e) => setMessage(e.target.value)} className={`${inputClass} mt-1.5 resize-y`} placeholder="Share measurements, access details, preferences, or any questions." /></label></section>
+    <Turnstile key={turnstileKey} onToken={setTurnstileToken} />
     {status === "error" && <p role="alert" className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <button type="submit" disabled={status === "sending"} className="inline-flex items-center gap-2 bg-forest px-6 py-3 text-sm font-medium text-cream transition hover:bg-leaf disabled:opacity-50">{status === "sending" ? "Sending request…" : "Request my quotation"}<ArrowRight className="h-4 w-4" /></button>
   </form>;

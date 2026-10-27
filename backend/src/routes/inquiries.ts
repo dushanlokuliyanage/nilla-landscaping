@@ -8,8 +8,10 @@ import { logActivity } from "../lib/logging.js";
 import { sendInquiryNotification, sendCustomerConfirmation } from "../lib/email.js";
 import { parsePositiveId, readJson } from "../lib/validation.js";
 import type { Env } from "../types.js";
+import { verifyTurnstile } from "../lib/turnstile.js";
 
 const inquirySchema = z.object({
+  turnstileToken: z.string().min(1).max(2048),
   name: z.string().trim().min(2).max(120),
   email: z.email().trim().max(254),
   phone: z.string().trim().max(40).optional(),
@@ -30,15 +32,17 @@ inquiryRoutes.post("/", async (c) => {
   if (!parsed.success) {
     return c.json({ error: parsed.error.flatten() }, 400);
   }
+  if (!await verifyTurnstile(c, parsed.data.turnstileToken)) return c.json({ error: "Security check failed. Please try again." }, 403);
 
   const db = getDb(c.env.DATABASE_URL);
-  const [created] = await db.insert(inquiries).values(parsed.data).returning();
+  const { turnstileToken: _token, ...inquiry } = parsed.data;
+  const [created] = await db.insert(inquiries).values(inquiry).returning();
 
   c.executionCtx.waitUntil(
-    sendInquiryNotification(parsed.data, c.env).catch(console.error)
+    sendInquiryNotification(inquiry, c.env).catch(console.error)
   );
   c.executionCtx.waitUntil(
-    sendCustomerConfirmation(parsed.data, c.env).catch(console.error)
+    sendCustomerConfirmation(inquiry, c.env).catch(console.error)
   );
 
   return c.json({ success: true, id: created.id }, 201);
