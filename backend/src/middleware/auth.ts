@@ -21,13 +21,31 @@ export async function requireAuth(c: Context<{ Bindings: Env }>, next: Next) {
     await logAccess(c, "unknown", "invalid_token");
     return c.json({ error: "Invalid or expired token" }, 401);
   }
-  const [admin] = await getDb(c.env.DATABASE_URL).select({ id: admins.id, email: admins.email, role: admins.role, isActive: admins.isActive }).from(admins).where(eq(admins.id, payload.id));
+  // Resolve the account and its current permissions in one database round trip.
+  // Admin pages make many API calls, so avoiding a second lookup on every call
+  // noticeably reduces latency and Neon query usage.
+  const [admin] = await getDb(c.env.DATABASE_URL)
+    .select({
+      id: admins.id,
+      email: admins.email,
+      role: admins.role,
+      isActive: admins.isActive,
+      permissions: adminRoles.permissions,
+      roleIsActive: adminRoles.isActive,
+    })
+    .from(admins)
+    .leftJoin(adminRoles, eq(adminRoles.key, admins.role))
+    .where(eq(admins.id, payload.id));
   if (!admin || !admin.isActive) {
     await logAccess(c, payload.email, "inactive_account", payload.id);
     return c.json({ error: "Account unavailable" }, 401);
   }
-  const [role] = await getDb(c.env.DATABASE_URL).select({ permissions: adminRoles.permissions, isActive: adminRoles.isActive }).from(adminRoles).where(eq(adminRoles.key, admin.role));
-  c.set("admin", { id: admin.id, email: admin.email, role: admin.role, permissions: admin.role === "owner" ? ["*"] : role?.isActive ? role.permissions : [] } satisfies AdminIdentity);
+  c.set("admin", {
+    id: admin.id,
+    email: admin.email,
+    role: admin.role,
+    permissions: admin.role === "owner" ? ["*"] : admin.roleIsActive ? admin.permissions ?? [] : [],
+  } satisfies AdminIdentity);
   await next();
 }
 

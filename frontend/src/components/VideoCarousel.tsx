@@ -133,7 +133,9 @@ export default function VideoCarousel() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [soundId, setSoundId] = useState<number | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [reduceMotion] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
   const trackRef = useRef<HTMLDivElement>(null);
 
   const openVideo = videos.find((v) => v.id === openId) ?? null;
@@ -142,7 +144,6 @@ export default function VideoCarousel() {
     getVideos()
       .then(setVideos)
       .catch(() => setVideos([]));
-    setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }, []);
 
   // Pop-up: Esc closes it, arrow keys switch videos, and the page does not scroll behind it
@@ -159,7 +160,7 @@ export default function VideoCarousel() {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [openVideo]);
+  }, [openVideo, stepOpen]);
 
   function slide(dir: 1 | -1) {
     const t = trackRef.current;

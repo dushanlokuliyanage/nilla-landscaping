@@ -23,10 +23,7 @@ export default function ProductView() {
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
-    if (!slug) {
-      setLoadState("notfound");
-      return;
-    }
+    if (!slug) return;
     getProduct(slug)
       .then((p) => {
         if (!p) {
@@ -72,11 +69,11 @@ export default function ProductView() {
     router.push("/cart");
   }
 
-  if (loadState === "loading") {
+  if (loadState === "loading" && slug) {
     return <p className="text-forest/60">Loading...</p>;
   }
 
-  if (loadState === "notfound" || !product) {
+  if (!slug || loadState === "notfound" || !product) {
     return (
       <div>
         <p className="text-forest/70">Sorry, we couldn&apos;t find that product.</p>

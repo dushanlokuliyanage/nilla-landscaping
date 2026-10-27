@@ -4,6 +4,8 @@
   "scripts": {
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:admin": "cd admin && npm run dev"
+    "dev:admin": "cd admin && npm run dev",
+    "build": "npm run build --prefix frontend && npm run build --prefix admin",
+    "lint": "npm run lint --prefix frontend && npm run lint --prefix admin"
   }
 }

@@ -1,24 +1,27 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
-import Inquiries from "@/pages/Inquiries";
-import Products from "@/pages/Products";
-import Orders from "@/pages/Orders";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Team from "@/pages/Team";
-import Logs from "@/pages/Logs";
-import Gallery from "@/pages/Gallery";
-import Videos from "@/pages/Videos";
-import MediaLibrary from "@/pages/MediaLibrary";
-import Roles from "@/pages/Roles";
-import Reports from "@/pages/Reports";
-import Quotes from "@/pages/Quotes";
 import AdminLayout from "@/components/AdminLayout";
-import Backup from "@/pages/Backup";
+
+const Login = lazy(() => import("@/pages/Login"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Inquiries = lazy(() => import("@/pages/Inquiries"));
+const Products = lazy(() => import("@/pages/Products"));
+const Orders = lazy(() => import("@/pages/Orders"));
+const Team = lazy(() => import("@/pages/Team"));
+const Logs = lazy(() => import("@/pages/Logs"));
+const Gallery = lazy(() => import("@/pages/Gallery"));
+const Videos = lazy(() => import("@/pages/Videos"));
+const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
+const Roles = lazy(() => import("@/pages/Roles"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const Quotes = lazy(() => import("@/pages/Quotes"));
+const Backup = lazy(() => import("@/pages/Backup"));
 
 export default function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<div role="status" className="p-6 text-sm text-stone-600">Loading page…</div>}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
@@ -39,6 +42,7 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
