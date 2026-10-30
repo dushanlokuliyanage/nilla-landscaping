@@ -137,7 +137,7 @@ quoteRoutes.post("/:id/send", requireAuth, requirePermission("inquiries.manage")
     await sendCustomerQuote({ ...quote, quoteNumber: quote.id + 1350 }, c.env);
   } catch (error) {
     console.error("Failed to send customer quotation", error);
-    return c.json({ error: "Email could not be sent. Check the email service configuration and try again." }, 502);
+    return c.json({ error: error instanceof Error ? `Email could not be sent: ${error.message}` : "Email could not be sent. Check the email service configuration and try again." }, 502);
   }
   const [updated] = await db.update(quoteRequests).set({ status: "sent", sentAt: new Date(), updatedAt: new Date() }).where(eq(quoteRequests.id, id)).returning();
   await logActivity(c, "quote_sent", "quote", id, { email: quote.email, total: quote.total });

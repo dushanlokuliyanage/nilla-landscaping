@@ -13,3 +13,7 @@ Contact inquiries, quote requests, and admin logins require a valid Cloudflare T
 - Backend: `TURNSTILE_SECRET_KEY` as a Worker secret; for local Wrangler development, copy `backend/.dev.vars.example` to `backend/.dev.vars` and set the key there
 
 Set the backend secret with `npx wrangler secret put TURNSTILE_SECRET_KEY` from `backend/`. The API fails closed when the secret is missing, so set it before deploying the frontend or submissions and logins will be rejected.
+
+## Customer quotation emails
+
+Configure both Resend values as Worker secrets from `backend/`: `npx wrangler secret put RESEND_API_KEY` (paste your Resend API key when prompted) and `npx wrangler secret put RESEND_FROM_EMAIL` (enter a sender address on a domain verified in Resend, such as `Nilla Garden <quotes@your-verified-domain.com>`). The `onboarding@resend.dev` fallback is only suitable for Resend's restricted test sending and cannot deliver to arbitrary customer addresses. Deploy the backend after setting the secrets. Customer quotations are emailed with a PDF attachment; send errors are surfaced in the admin panel, and quotes are only marked sent after Resend confirms acceptance.

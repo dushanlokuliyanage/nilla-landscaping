@@ -4,6 +4,7 @@ export type Env = {
   };
   DATABASE_URL: string;
   RESEND_API_KEY: string;
+  RESEND_FROM_EMAIL?: string;
   JWT_SECRET: string;
   ADMIN_EMAIL: string;
   FRONTEND_URL: string;
